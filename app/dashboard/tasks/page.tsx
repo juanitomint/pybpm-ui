@@ -101,14 +101,16 @@ const QUERY_KEYS = {
 
 // --- Backend calls ------------------------------------------------------- //
 
- async function fetchTasksList(statusFilter?: string): Promise<TasksListResponse> {
-   const params = new URLSearchParams({ page: '1', per_page: '99' });
-   if (statusFilter) params.set('status', statusFilter);
-   const res = await api.get<TasksListResponse>(`/api/dashboard/tasks-proxy?${params.toString()}`);
-   return res.data;
- }
-
-/** PATCH /dashboard/tasks/status — composite PK + target_status come in request body. */
+async function fetchTasksList(statusFilter?: string): Promise<TasksListResponse> {
+  const baseUrl = process.env.NEXT_PUBLIC_PYBPM_API_URL || 'http://localhost:5000';
+  const token = localStorage.getItem('token');
+  const params = new URLSearchParams({ page: '1', per_page: '99' });
+  if (statusFilter) params.set('status', statusFilter);
+  const res = await fetch(`${baseUrl}/dashboard/tasks?${params.toString()}`, {
+    headers: token ? { Authorization: `Bearer ${token}` } : {},
+  });
+  return res.json();
+}
 async function transitionTask(resourceId: string, idwf: string, targetStatus: KanbanStatus): Promise<void> {
   const res = await api.patch('/dashboard/tasks/status', {
     resource_id: resourceId,

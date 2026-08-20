@@ -1,6 +1,8 @@
 import axios from 'axios';
 
-const api = axios.create({});
+const api = axios.create({
+  baseURL: process.env.NEXT_PUBLIC_PYBPM_API_URL || 'http://localhost:5000',
+});
 
 // Request interceptor - add auth token to all requests
 api.interceptors.request.use((config) => {
