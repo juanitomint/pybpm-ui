@@ -104,7 +104,7 @@ const QUERY_KEYS = {
  async function fetchTasksList(statusFilter?: string): Promise<TasksListResponse> {
    const params = new URLSearchParams({ page: '1', per_page: '99' });
    if (statusFilter) params.set('status', statusFilter);
-   const res = await api.get<TasksListResponse>(`/dashboard/tasks?${params.toString()}`);
+   const res = await api.get<TasksListResponse>(`/api/dashboard/tasks-proxy?${params.toString()}`);
    return res.data;
  }
 

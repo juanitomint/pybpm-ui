@@ -1,20 +1,32 @@
 'use client';
+import { useEffect, useState } from 'react';
 import { Box, Card, CardContent, Typography } from '@mui/material';
 
 import { useAuth } from '../../src/hooks/useAuth';
+import api from '../../src/api/client';
 import { BarChart3 } from 'lucide-react';
 import { Clock } from 'lucide-react';
 import { CheckCircle2 } from 'lucide-react';
 import { AlertTriangle } from 'lucide-react';
-const kpiCards = [
-  { label: 'Total Tasks', value: '0', icon: BarChart3, color: '#1976d2' },
-  { label: 'Pending', value: '0', icon: Clock, color: '#f59e0b' },
-  { label: 'Completed', value: '0', icon: CheckCircle2, color: '#10b981' },
-  { label: 'Overdue', value: '0', icon: AlertTriangle, color: '#ef4444' },
-];
 
+interface CaseCounts {
+  open: number;
+  closed: number;
+}
 export default function DashboardPage() {
-  const { user } = useAuth();
+  const { user, loading: authLoading } = useAuth();
+  const [counts, setCounts] = useState<CaseCounts | null>(null);
+
+  useEffect(() => {
+    if (authLoading) return;
+    api.get('/dashboard/cases/count')
+      .then((res) => setCounts(res.data))
+      .catch((_err) => setCounts(null));
+  }, [authLoading]);
+
+  const total = (counts?.open ?? 0) + (counts?.closed ?? 0);
+  const pending = counts?.open ?? 0;
+  const completed = counts?.closed ?? 0;
 
   return (
     <Box sx={{ p: 3 }}>
@@ -23,7 +35,12 @@ export default function DashboardPage() {
       </Typography>
 
       <Box sx={{ display: 'flex', flexWrap: { xs: 'wrap', md: 'nowrap' }, gap: 2, mt: 2 }}>
-        {kpiCards.map((card) => (
+        {[
+          { label: 'Total Cases', value: String(total), icon: BarChart3, color: '#1976d2' },
+          { label: 'Open', value: String(pending), icon: Clock, color: '#f59e0b' },
+          { label: 'Closed', value: String(completed), icon: CheckCircle2, color: '#10b981' },
+          { label: 'Overdue', value: '0', icon: AlertTriangle, color: '#ef4444' },
+        ].map((card) => (
           <Box key={card.label} sx={{ flex: '1 1 calc(33.33% - 16px)', minWidth: 280 }}>
             <Card
               elevation={0}

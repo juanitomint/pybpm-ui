@@ -53,13 +53,13 @@ export default function MessageDetailPage() {
   // Fetch single message — marks it as read on retrieval per API spec
   const { data: message, isLoading, error } = useQuery({
     queryKey: ['message', messageid],
-    queryFn: () => api.get<MessageRead>(`/api/v1/inbox/message/${messageid}/`).then((r: {data: MessageRead}) => r.data),
+    queryFn: () => api.get<MessageRead>(`/inbox/message/${messageid}/`).then((r: {data: MessageRead}) => r.data),
     enabled: !!messageid,
   });
 
   // Delete mutation — moves message to trash
   const deleteMutation = useMutation({
-    mutationFn: (id: string) => api.delete(`/api/v1/inbox/message/${id}/`),
+    mutationFn: (id: string) => api.delete(`/inbox/message/${id}/`),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['folderMessages'] });
       router.push('/dashboard/inbox');
@@ -68,7 +68,7 @@ export default function MessageDetailPage() {
 
   // Star toggle mutation
   const starMutation = useMutation({
-    mutationFn: (star: boolean) => api.patch(`/api/v1/inbox/message/${messageid}/`, { star }),
+    mutationFn: (star: boolean) => api.patch(`/inbox/message/${messageid}/`, { star }),
     onSettled: () => queryClient.invalidateQueries({ queryKey: ['message', messageid] }),
   });
 

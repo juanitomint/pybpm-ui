@@ -17,7 +17,7 @@ export function useAuth() {
     console.log('[useAuth] Initial state - Token found:', !!token);
     
     if (token) {
-      api.get('/auth/me')
+    api.get('/api/v1/auth/me')
         .then((res) => {
           console.log('[useAuth] User info fetched:', res.data);
           setUser(res.data);
@@ -39,15 +39,14 @@ export function useAuth() {
       console.log('[useAuth] Attempting login for user:', nick);
       
       const formData = new URLSearchParams({ username: nick, password }).toString();
-      const res = await api.post('/auth/token', formData, {
+      const res = await api.post('/api/v1/auth/token', formData, {
         headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
       });
-      
       console.log('[useAuth] Login successful, storing token');
       localStorage.setItem('token', res.data.access_token);
       
       // Fetch user info with the new token
-      const me = await api.get('/auth/me');
+      const me = await api.get('/api/v1/auth/me');
       setUser(me.data);
       console.log('[useAuth] User set:', me.data);
       

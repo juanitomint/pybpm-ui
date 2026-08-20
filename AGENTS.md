@@ -35,6 +35,41 @@ pybpm-ui/
 └── package.json            # Dependencies (React, Next.js, TanStack Query, Axios, Tailwind)
 ```
 
+## Task Lifecycle
+
+Tasks (BPMN token instances) follow a four-state lifecycle. The UI renders them into columns by querying the API with specific filters per column. **All queries must be authenticated** — use `api` (from `src/api/client.ts`) for every request; the client injects the JWT automatically.
+
+### Loading rules
+
+Each column has its own query. Tasks are loaded separately per column — never mix filter criteria across columns in a single call:
+
+| Column | Filter | API behavior |
+|--------|--------|-------------|
+| **Pending** | `status = 'user'` AND token is **not locked** | GET `/dashboard/tasks/pending/{idwf}/{caseId}` (or equivalent paginated endpoint) — returns unlocked tokens assigned to the current user |
+| **In-progress** | `status = 'user'` AND token is **locked** by the current user | GET same endpoint, filter locally for `lockedBy === currentUser.id`; or use a dedicated `/tasks/progressing` endpoint if one exists |
+| **Validating** | `status = 'validating'` | GET with status filter; returned as its own list (separate query from pending/in-progress) |
+| **Done** | `status = 'done'` | Separate query entirely — do not mix done tasks into the other columns |
+
+When loading, always fetch counts first (`GET dashboard/tasks/count`) so the UI can render column headers with numbers (e.g. "Pending (3)"). Then load the paginated task lists per column.
+
+### Transitions
+
+All transitions use `PATCH /dashboard/tasks/{idtoken}/status` with body `{ target_status: "<new-status>" }`. The endpoint returns the previous and new status for optimistic UI updates.
+
+| Transition | Action on API |
+|-----------|---------------|
+| **pending → in-progress** | Lock the task first (set `lockedBy = currentUser.id`, `lockTimestamp = now`), then call PATCH with `target_status: "user"`. The lock tells other users this person is working on it. |
+| **in-progress → pending** | Unlock the task (clear `lockedBy` and `lockTimestamp`), then call PATCH with `target_status: "user"`. The task returns to the pending pool for reassignment. |
+| **in-progress → validating** | Call PATCH with `target_status: "validating"`. No lock change needed — the validator takes over from here. |
+| **validating → in-progress** | Call PATCH with `target_status: "user"` and re-lock the task if returning to the original owner, or leave unlocked for reassignment. The status reverts so it appears back in pending/in-progress columns. |
+
+### Implementation notes
+
+- Use TanStack Query mutations (`useMutation`) for transitions — they handle loading states, error boundaries, and refetch automatically.
+- After a successful transition, invalidate the affected column's query key (e.g. `['tasks', 'pending']`) so TanStack Query refetches that column without affecting others.
+- Handle 409 Conflict if a user tries to lock a task already locked by another user — show a toast and refresh the pending list.
+- The `TaskListItem` schema from pybpm-api carries three lock-related fields: ``locked_by`` (int | null, raw FK for local filtering — compare against ``currentUser.id`` to determine in-progress vs pending), ``locked`` (bool), and ``locked_by_nick`` (str | null, display name).
+
 ## Connecting to the API
 
 In development mode, `next dev` proxies `/api/*` requests to `pybpm-api-app:5000` (Docker Compose service). In production, a reverse proxy (nginx/Caddy) serves both frontend and API.

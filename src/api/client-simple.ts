@@ -3,11 +3,9 @@ import axios from 'axios';
 // Use environment variable for API base URL (direct backend access, bypassing Next.js proxy)
 const BACKEND_URL = process.env.NEXT_PUBLIC_PYBPM_API_URL || 'http://localhost:5000';
 
-console.log('API Client configured with baseURL:', `${BACKEND_URL}/api/v1`);
-
+console.log('API Client configured with baseURL:', BACKEND_URL);
 const api = axios.create({
-  baseURL: `${BACKEND_URL}/api/v1`,
-  headers: { 'Content-Type': 'application/json' },
+  baseURL: BACKEND_URL,
 });
 
 // Request interceptor - add auth token to all requests

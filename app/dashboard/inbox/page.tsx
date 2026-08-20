@@ -89,7 +89,7 @@ export default function InboxPage() {
 
   const itemsPerPage = 15;
 
-  // Fetch inbox messages via POST /api/v1/inbox/filter/
+  // Fetch inbox messages via POST /inbox/filter/
   const { data: folderResponse, isLoading } = useQuery({
     queryKey: ['inbox-filter', filterRead, page],
     queryFn: async () => {

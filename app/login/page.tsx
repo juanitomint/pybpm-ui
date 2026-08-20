@@ -27,7 +27,7 @@ function LoginPageContent() {
   const [loading, setLoading] = useState(false);
 
   const searchParams = useSearchParams();
-  const redirect = searchParams.get('redirect') || '/dashboard/tasks';
+  const redirect = searchParams.get('redirect') || '/dashboard';
   const { login } = useAuth();
 
   const handleSubmit = async (e: any) => {

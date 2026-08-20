@@ -13,18 +13,26 @@ const ThemeContext = createContext<ThemeContextValue | null>(null);
 export function useDarkMode() {
   const [mode, setMode] = useState<'light' | 'dark'>('light');
 
-  useEffect(() => {
+    useEffect(() => {
+    const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
     const savedTheme = localStorage.getItem('theme');
+
+    // Apply explicit user preference if set; otherwise fall back to system default (sync check).
     if (savedTheme === 'dark') {
       setMode('dark');
       document.documentElement.classList.add('dark');
     } else {
-      setMode('light');
-      document.documentElement.classList.remove('dark');
+      const isSystemDark = mediaQuery.matches;
+      if (isSystemDark) {
+        setMode('dark');
+        document.documentElement.classList.add('dark');
+      } else {
+        setMode('light');
+        document.documentElement.classList.remove('dark');
+      }
     }
 
     // Listen for system theme changes (only if no explicit user preference)
-    const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
     const handler = (e: MediaQueryListEvent) => {
       if (!localStorage.getItem('theme')) {
         setMode(e.matches ? 'dark' : 'light');
@@ -32,7 +40,7 @@ export function useDarkMode() {
     };
     mediaQuery.addEventListener('change', handler);
     return () => mediaQuery.removeEventListener('change', handler);
-  }, []);
+    }, []);
 
   const toggleTheme = useCallback(() => {
     setMode(prevMode => {

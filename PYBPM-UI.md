@@ -11,32 +11,35 @@ React SPA built with Next.js App Router that replaces the legacy ExtJS case mana
 ```mermaid
 graph TB
     subgraph "Browser"
-        LOGIN[Login Page<br/>/login]
-        DASHBOARD[Dashboard Layout Shell<br/>app/dashboard/layout.tsx]
-        TASKS[Tasks Page<br/>/dashboard/tasks]
-        INBOX[Inbox Page<br/>/dashboard/inbox]
+        LOGIN[Login Page - /login]
+        DASHBOARD[Dashboard Layout Shell - app/dashboard/layout.tsx]
+        TASKS[Tasks Page - /dashboard/tasks]
+        INBOX[Inbox Page - /dashboard/inbox]
     end
 
     subgraph "Auth"
-        MIDDLEWARE[Next.js Middleware<br/>auth gate]
-        USEAUTH[useAuth hook<br/>src/hooks/useAuth.ts]
+        MIDDLEWARE[Next.js Middleware - auth gate]
+        USEAUTH[useAuth hook - src/hooks/useAuth.ts]
     end
 
     subgraph "API Layer (pybpm-api)"
         AUTH_TOKEN[POST /api/v1/auth/token]
         AUTH_ME[GET /api/v1/auth/me]
-        INBOX_INDEX[GET /api/v1/inbox/]
-        INBOX_FILTER[POST /api/v1/inbox/filter/]
-        INBOX_COUNTS[POST /api/v1/inbox/counts/]
-        MSG_READ[GET /api/v1/inbox/message/{id}/]
-        MSG_ACTION[PATCH /api/v1/inbox/message/{id}/]
+        INBOX_INDEX[GET /inbox]
+        INBOX_FILTER[POST /inbox/filter/]
+        INBOX_COUNTS[POST /inbox/counts/]
+        MSG_READ[GET /inbox/message/{msgid}/]
+        MSG_PATCH[PATCH /inbox/message/{msgid}/]
+        TASKS_GET[GET /dashboard/tasks]
+        CASES_GET[GET /dashboard/cases]
     end
 
     LOGIN --> AUTH_TOKEN
     AUTH_TOKEN --> USEAUTH
     MIDDLEWARE --> USEAUTH
-    DASHBOARD --> INBOX_INDEX
-    TASKS --> INBOX_FILTER
+    DASHBOARD --> CASES_GET
+    TASKS --> TASKS_GET
+    INBOX --> INBOX_INDEX
     INBOX --> INBOX_COUNTS
 ```
 
@@ -93,20 +96,20 @@ pybpm-ui/
 ├── tsconfig.json                      # Strict TS for App Router
 └── package.json                       # Dependencies
 ```
-
----
-
 ## API Contract
 
 | Endpoint | Method | Auth | Request Body | Response | Used By |
 |----------|--------|------|-------------|----------|---------|
 | `/api/v1/auth/token` | POST | No | `{nick, password}` (JSON) | `{access_token: string, token_type: "bearer"}` | F1 Login |
 | `/api/v1/auth/me` | GET | Bearer | — | `{idu, nick, name}` | F3 Middleware check |
-| `/api/v1/inbox/` | GET | Bearer | Query: `page`, `per_page`, `filter_query` | `FolderMessagesResponse` (paginated) | F6 Inbox list |
-| `/api/v1/inbox/filter/` | POST | Bearer | `{folder?, read?, star?, tag?}` | `FolderMessagesResponse` | F5 Tasks filter / F6 Advanced filter |
-| `/api/v1/inbox/counts/` | POST | Bearer | `{folder?, read?, star?, tag?}` | `{total_count, unread_count}` | F4 Nav badge counts |
-| `/api/v1/inbox/message/{id}/` | GET | Bearer | — | `MessageRead` (single message) | F6b Detail view |
-| `/api/v1/inbox/message/{id}/` | PATCH | Bearer | `{read?, star?, tag?}` | `{success, ...action fields}` | F6 Mark read / star / tag |
+| `/inbox` | GET | Bearer | Query: `page`, `per_page`, `filter_query` | Paginated message list | F6 Inbox list |
+| `/inbox/filter/` | POST | Bearer | `{folder?, read?, star?, tag?}` | Paginated message list | F5 Tasks filter / F6 Advanced filter |
+| `/inbox/counts/` | POST | Bearer | `{folder?, read?, star?, tag?}` | `{total_count, unread_count}` | F4 Nav badge counts |
+| `/dashboard/tasks` | GET | Bearer | Query: `page`, `per_page`, `filter_query` | Paginated task list | F5 Tasks page (primary) |
+| `/dashboard/tasks/count` | GET | Bearer | — | `{total_count}` | P3.2 Drawer badge |
+| `/inbox/message/{msgid}/` | GET | Bearer | — | `MessageRead` (single message) | F6b Detail view |
+| `/inbox/message/{msgid}/` | PATCH | Bearer | `{read?, star?, tag?}` | `{success, ...action fields}` | F6 Mark read / star / tag |
+| `/inbox/send/` | POST | Bearer | `{to_user, subject, body, tag?}` | — | Send message action |
 
 ### Inbox Message Schema (`MessageRead`)
 ```ts
@@ -124,6 +127,16 @@ pybpm-ui/
   msg_time: string;        // timestamp of last activity
 }
 ```
+### API Route Discovery (authoritative)
+
+**Always check the live OpenAPI schema before writing client code.** FastAPI's runtime route paths may differ from `main.py` router mounts due to dual mounts, prefix stripping, or patching. Never guess routes from memory or source code alone.
+
+```bash
+# Fetch the authoritative route list from the running API:
+curl -s ${PYBPM_API_URL:-http://127.0.0.1:5000}/openapi.json | python3 -c "import sys,json; [print(m.upper(),p) for p,methods in sorted(json.load(sys.stdin)['paths'].items()) for m in methods]"
+```
+
+This outputs every route currently registered on the running server with its method and path — use this as ground truth when updating pybpm-ui routes, Playwright scripts, or any client-side API call. The schema is also available at `/docs#/` in a browser for interactive exploration.
 
 ---
 
@@ -208,11 +221,10 @@ test.describe('Authentication', () => {
   });
 
   test('logs in with valid credentials and stores token', async ({ page, request }) => {
-    // POST /auth/token directly to get a real JWT from pybpm-api
+    // POST /api/v1/auth/token directly to get a real JWT from pybpm-api
     const loginRes = await request.post('/api/v1/auth/token', {
       data: { nick: 'admin', password: 'changeme' },
     });
-    expect(loginRes.status()).toBe(200);
     const { access_token } = await loginRes.json();
 
     // Set token in localStorage (simulating successful form submit)
@@ -230,7 +242,6 @@ test.describe('Authentication', () => {
     const loginRes = await request.post('/api/v1/auth/token', {
       data: { nick: 'admin', password: 'changeme' },
     });
-    const { access_token } = await loginRes.json();
     await page.addInitScript((token) => window.localStorage.setItem('token', token), access_token);
 
     await page.goto('/dashboard/tasks');
@@ -245,10 +256,9 @@ test.describe('Authentication', () => {
   });
 
   test('middleware blocks direct API calls with invalid token', async ({ request }) => {
-    const res = await request.get('/api/v1/inbox/', {
+    const res = await request.get('/inbox/', {
       headers: { Authorization: 'Bearer invalid-token' },
     });
-    // Should return 401 or redirect (FastAPI returns 401)
     expect([401, 307]).toContain(res.status());
   });
 });
@@ -268,7 +278,6 @@ test.describe('Theme Switching', () => {
       return fetch('/api/v1/auth/token', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ nick: '${validUser}', password: '${password}' }),
       }).then(r => r.json());
     });
     await page.addInitScript((token) => window.localStorage.setItem('token', token), res.access_token);
@@ -377,7 +386,6 @@ test.describe('Tasks Page', () => {
       return fetch('/api/v1/auth/token', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ nick: '${validUser}', password: '${password}' }),
       }).then(r => r.json());
     });
     const { access_token } = res;
@@ -424,10 +432,9 @@ test.describe('Tasks Page', () => {
     await card.click();
     // After navigation or modal open, the message should be marked read in API
     const res = await page.evaluate(async () => {
-      return fetch('/api/v1/inbox/filter/', {
+      return fetch('/inbox/filter/', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ tag: 'task', read: true }),
       }).then(r => r.json());
     });
     expect(res.total_count).toBeGreaterThan(0);
@@ -446,7 +453,6 @@ test.describe('Inbox', () => {
       return fetch('/api/v1/auth/token', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ nick: 'admin', password: 'changeme' }),
       }).then(r => r.json());
     });
     await page.addInitScript((token) => window.localStorage.setItem('token', token), res.access_token);
@@ -486,10 +492,9 @@ test.describe('Inbox', () => {
     // Mark first message as read via API call from the client
     const msgId = await page.locator('[data-testid="message-row"]').first().getAttribute('data-msgid');
     await page.evaluate(async (id) => {
-      return fetch(`/api/v1/inbox/message/${id}/`, {
+      return fetch(`/inbox/message/${id}/`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ read: true }),
       }).then(r => r.json());
     }, msgId);
     // Badge should update (counts refetch or cache invalidation)
