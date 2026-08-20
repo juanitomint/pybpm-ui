@@ -5,382 +5,357 @@ import Box from '@mui/material/Box';
 import Typography from '@mui/material/Typography';
 import Card from '@mui/material/Card';
 import CardContent from '@mui/material/CardContent';
-import CardActions from '@mui/material/CardActions';
 import Chip from '@mui/material/Chip';
-import Button from '@mui/material/Button';
-import IconButton from '@mui/material/IconButton';
-import Select from '@mui/material/Select';
-import MenuItem from '@mui/material/MenuItem';
-import FormControl from '@mui/material/FormControl';
-import InputLabel from '@mui/material/InputLabel';
 import LinearProgress from '@mui/material/LinearProgress';
-import Pagination from '@mui/material/Pagination';
-import { useQuery } from '@tanstack/react-query';
+import { useTheme } from '../../providers';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 
 import api from '../../../src/api/client';
 
-// Lucide icons (imported via path to avoid name mismatches in lucide-react v1.x)
-import { Clock as ClockIcon } from 'lucide-react';
-import { Flag as FlagIcon } from 'lucide-react';
-import { CheckCircle as CheckCircleIcon } from 'lucide-react';
-import { XCircle as XCircleIcon } from 'lucide-react';
-import { AlertTriangle as AlertTriangleIcon } from 'lucide-react';
-import { Filter as FilterIcon } from 'lucide-react';
-import { ArrowUpDown as ArrowUpDownIcon } from 'lucide-react';
+// --- Types --------------------------------------------------------------- //
 
-// --- Types ---
-
-interface InboxMessage {
-  msgid: string;
-  subject: string;
-  body?: string;
-  from_user?: string;
-  to_user?: string;
-  folder: 'inbox' | 'sent' | 'trash';
-  read: boolean;
-  star: boolean;
-  tag?: string;
-  checkdate?: Date | null;
-  msg_time?: Date;
-}
-
-interface TaskCard {
-  id: string;
+interface TaskListItem {
+  resourceId: string;
+  idwf: string;
+  type: string;
   title: string;
-  status: InboxMessage['folder'];
-  priority: 'high' | 'normal';
-  dueDate: Date | null;
-  progress: number;
-  isRead: boolean;
-  starred: boolean;
+  status: 'user' | 'validating' | 'done';
+  locked_by: number | null;
+  locked: boolean;
+  locked_by_nick: string | null;
+  checkDate: string | null;
+  timeElapsed: string;
+  modelName: string;
+  caseId: string;
 }
 
-type FilterStatus = 'all' | 'inbox' | 'sent' | 'trash';
-type SortBy = 'due-date' | 'priority' | 'subject';
-type SortOrder = 'asc' | 'desc';
+interface TasksListResponse {
+  tasks: TaskListItem[];
+  total: number;
+  page: number;
+  per_page: number;
+  total_pages: number;
+}
 
-// --- Helpers ---
+type KanbanStatus = 'pending' | 'in_progress' | 'validating' | 'done';
+
+const STATUS_TO_BACKEND: Record<KanbanStatus, string> = {
+  pending: 'user',
+  in_progress: 'user',
+  validating: 'validating',
+  done: 'done',
+};
+
+interface KanbanCard {
+  resourceId: string;
+  idwf: string;
+  title: string;
+  status: KanbanStatus;
+  lockedByMe: boolean;
+  checkDate: Date | null;
+  timeElapsed: string;
+  modelName: string;
+  caseId: string;
+}
+
+interface ColumnDef {
+  key: KanbanStatus;
+  label: string;
+  color: 'default' | 'primary' | 'warning' | 'info' | 'success';
+  accent: string;
+  bgLight: string;
+  bgDark: string;
+}
+
+// --- Helpers ------------------------------------------------------------- //
 
 function formatRelativeDate(date: Date | null): string {
-  if (!date) return 'No due date';
-
+  if (!date) return '';
   const now = new Date();
   const diffMs = date.getTime() - now.getTime();
   const diffDays = Math.round(diffMs / (1000 * 60 * 60 * 24));
-
   if (diffDays < -3) return `${Math.abs(diffDays)}d overdue`;
   if (diffDays === -1) return 'Yesterday';
   if (diffDays === 0) return 'Today';
   if (diffDays === 1) return 'Tomorrow';
   if (diffDays <= 7) return `${diffDays} days from now`;
-  return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+  return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
 }
 
-function formatDateAbsolute(date: Date | null): string {
-  if (!date) return '';
-  return date.toLocaleDateString('en-US', {
-    month: 'short',
-    day: 'numeric',
-    year: 'numeric',
+// --- Kanban columns ------------------------------------------------------ //
+
+const COLUMNS: ColumnDef[] = [
+  { key: 'pending', label: 'Pending', color: 'default', accent: '#757575', bgLight: '#f5f5f5', bgDark: '#242424' },
+  { key: 'in_progress', label: 'In Progress', color: 'primary', accent: '#1976d2', bgLight: '#e3f2fd', bgDark: '#0a1b2e' },
+  { key: 'validating', label: 'Validating', color: 'warning', accent: '#f59e0b', bgLight: '#fff8e1', bgDark: '#2c1e00' },
+  { key: 'done', label: 'Done', color: 'success', accent: '#10b981', bgLight: '#e8f5e9', bgDark: '#071a0e' },
+];
+
+const QUERY_KEYS = {
+  all: ['dashboard-tasks'] as const,
+  pending: ['tasks', 'pending'] as const,
+  in_progress: ['tasks', 'in_progress'] as const,
+  validating: ['tasks', 'validating'] as const,
+  done: ['tasks', 'done'] as const,
+};
+
+// --- Backend calls ------------------------------------------------------- //
+
+ async function fetchTasksList(statusFilter?: string): Promise<TasksListResponse> {
+   const params = new URLSearchParams({ page: '1', per_page: '99' });
+   if (statusFilter) params.set('status', statusFilter);
+   const res = await api.get<TasksListResponse>(`/dashboard/tasks?${params.toString()}`);
+   return res.data;
+ }
+
+/** PATCH /dashboard/tasks/status — composite PK + target_status come in request body. */
+async function transitionTask(resourceId: string, idwf: string, targetStatus: KanbanStatus): Promise<void> {
+  const res = await api.patch('/dashboard/tasks/status', {
+    resource_id: resourceId,
+    idwf,
+    target_status: STATUS_TO_BACKEND[targetStatus],
   });
+  if (res.status >= 400) throw new Error(`transition failed: ${res.status}`);
 }
 
-// --- Component ---
+// --- Component ----------------------------------------------------------- //
 
 export default function TasksPage() {
-  const [filterStatus, setFilterStatus] = useState<FilterStatus>('all');
-  const [sortBy, setSortBy] = useState<SortBy>('due-date');
-  const [sortOrder, setSortOrder] = useState<SortOrder>('asc');
-  const [page, setPage] = useState(1);
-  const itemsPerPage = 9;
+  const [draggedId, setDraggedId] = useState<{ resourceId: string; idwf: string } | null>(null);
+  const [droppingColumn, setDroppingColumn] = useState<KanbanStatus | null>(null);
+  const queryClient = useQueryClient();
+  const { mode } = useTheme();
 
-  // Fetch tasks: POST /api/v1/inbox/filter/ with { tag: 'task', folder }
-  const { data: messages, isLoading } = useQuery({
-    queryKey: ['inbox-filter', filterStatus],
-    queryFn: async () => {
-      const body: Record<string, unknown> = { tag: 'task' };
-      if (filterStatus !== 'all') {
-        body.folder = filterStatus;
+   const { data: pendingData, isLoading: loadingPending } = useQuery({
+     queryKey: QUERY_KEYS.pending,
+     queryFn: () => fetchTasksList(),
+   });
+
+  const { data: inProgressData } = useQuery({
+    queryKey: QUERY_KEYS.in_progress,
+    queryFn: () => fetchTasksList('user'),
+    select: (data) => ({ ...data, _lockedOnly: true }),
+  });
+
+  const { data: validatingData } = useQuery({
+    queryKey: QUERY_KEYS.validating,
+    queryFn: () => fetchTasksList('validating'),
+  });
+
+  const { data: doneData } = useQuery({
+    queryKey: QUERY_KEYS.done,
+    queryFn: () => fetchTasksList('done'),
+  });
+
+  const isLoading = loadingPending;
+
+  const seededBoard: KanbanCard[] = useMemo(() => {
+    const seed = (items: TaskListItem[], status: KanbanStatus): KanbanCard[] => items.map((t) => ({
+      resourceId: t.resourceId,
+      idwf: t.idwf,
+      title: t.title || '(no title)',
+      status,
+      lockedByMe: !!t.locked_by,
+      checkDate: t.checkDate ? new Date(t.checkDate) : null,
+      timeElapsed: t.timeElapsed,
+      modelName: t.modelName,
+      caseId: t.caseId,
+    }));
+
+    const all = [
+      ...seed(pendingData?.tasks ?? [], 'pending'),
+      ...seed(inProgressData?.tasks ?? [], 'in_progress'),
+      ...seed(validatingData?.tasks ?? [], 'validating'),
+      ...seed(doneData?.tasks ?? [], 'done'),
+    ];
+
+    const seen = new Set<string>();
+    return all.filter((c) => {
+      const key = `${c.resourceId}:${c.idwf}`;
+      if (seen.has(key)) return false;
+      seen.add(key);
+      return true;
+    });
+  }, [pendingData, inProgressData, validatingData, doneData]);
+
+  const columns = useMemo(() => {
+    return COLUMNS.map((col) => ({
+      ...col,
+      cards: seededBoard.filter((c) => c.status === col.key),
+    }));
+  }, [seededBoard]);
+
+  // --- Mutations (useMutation per AGENTS.md) --------------------------- //
+
+  const transitionMutation = useMutation({
+    mutationFn: ({ resourceId, idwf, targetStatus }: { resourceId: string; idwf: string; targetStatus: KanbanStatus }) =>
+      transitionTask(resourceId, idwf, targetStatus),
+    onMutate: async ({ resourceId, idwf, targetStatus }) => {
+      const previousBoard = queryClient.getQueryData<KanbanCard[]>(QUERY_KEYS.all);
+      if (previousBoard) {
+        queryClient.setQueryData(
+          QUERY_KEYS.all,
+          previousBoard.map((c) =>
+            c.resourceId === resourceId && c.idwf === idwf ? { ...c, status: targetStatus } : c,
+          ),
+        );
       }
-      const res = await api.post<InboxMessage[]>('/inbox/filter/', body);
-      return res.data;
+
+      await queryClient.cancelQueries({ queryKey: QUERY_KEYS[targetStatus] });
+
+      return { resourceId, idwf };
+    },
+    onSuccess: async (_data, variables) => {
+      const { targetStatus } = variables;
+      await queryClient.invalidateQueries({ queryKey: QUERY_KEYS[targetStatus] });
+    },
+    onSettled: async () => {
+      await queryClient.invalidateQueries({ queryKey: QUERY_KEYS.all });
+    },
+    onError: (err, _variables) => {
+      const axiosErr = err as { response?: { status?: number }; message?: string };
+      if (axiosErr.response?.status === 409) {
+        console.warn('[Kanban] 409 Conflict — likely already locked by another user');
+      } else {
+        console.warn('[Kanban] Transition failed:', axiosErr.message ?? err);
+      }
     },
   });
 
-  // Map inbox messages to TaskCard
-  const tasks: TaskCard[] = useMemo(() => {
-    if (!messages) return [];
-    return messages.map((msg) => ({
-      id: msg.msgid,
-      title: msg.subject || '(no subject)',
-      status: msg.folder,
-      priority: (msg.tag === 'high' ? 'high' : 'normal'),
-      dueDate: msg.checkdate ?? null,
-      progress: Math.round(Math.random() * 100), // simulated progress
-      isRead: !!msg.read,
-      starred: !!msg.star,
-    }));
-  }, [messages]);
+  // --- Drag handlers --------------------------------------------------- //
 
-  // Sort tasks
-  const sortedTasks = useMemo(() => {
-    const sorted = [...tasks];
-    sorted.sort((a, b) => {
-      let cmp = 0;
-      if (sortBy === 'due-date') {
-        if (!a.dueDate && !b.dueDate) cmp = 0;
-        else if (!a.dueDate) cmp = 1;
-        else if (!b.dueDate) cmp = -1;
-        else cmp = a.dueDate.getTime() - b.dueDate.getTime();
-      } else if (sortBy === 'priority') {
-        const priorityOrder = { high: 0, normal: 1 };
-        cmp = priorityOrder[a.priority] - priorityOrder[b.priority];
-      } else if (sortBy === 'subject') {
-        cmp = a.title.localeCompare(b.title);
+  const onDragStart = (card: KanbanCard) => {
+    setDraggedId({ resourceId: card.resourceId, idwf: card.idwf });
+  };
+
+  const onDragEnd = () => {
+    setDraggedId(null);
+    setDroppingColumn(null);
+  };
+
+  const handleDrop = async (targetStatus: KanbanStatus) => {
+    if (!draggedId || droppingColumn !== targetStatus) return;
+    const card = seededBoard.find(
+      (c) => c.resourceId === draggedId.resourceId && c.idwf === draggedId.idwf,
+    );
+    if (!card) return;
+
+    setDroppingColumn(null);
+    const from = card.status;
+
+    try {
+      // AGENTS.md: pending → in_progress requires lock first.
+      if (from !== targetStatus && from === 'pending' && targetStatus === 'in_progress') {
+        await api.patch('/dashboard/tasks/lock', {
+          resource_id: card.resourceId,
+          idwf: card.idwf,
+        });
+      } else if (from !== targetStatus && from === 'in_progress' && targetStatus === 'pending') {
+        await api.patch('/dashboard/tasks/unlock', {
+          resource_id: card.resourceId,
+          idwf: card.idwf,
+        });
       }
-      return sortOrder === 'asc' ? cmp : -cmp;
-    });
-    return sorted;
-  }, [tasks, sortBy, sortOrder]);
 
-  // Pagination
-  const totalPages = Math.max(1, Math.ceil(sortedTasks.length / itemsPerPage));
-  const paginatedTasks = sortedTasks.slice(
-    (page - 1) * itemsPerPage,
-    page * itemsPerPage
-  );
+      transitionMutation.mutate({ resourceId: card.resourceId, idwf: card.idwf, targetStatus });
+    } catch (err) {
+      console.warn('[Kanban] Pre-transition step failed:', err);
+    } finally {
+      setDraggedId(null);
+    }
+  };
 
-  const toggleSortOrder = () => setSortOrder((o) => (o === 'asc' ? 'desc' : 'asc'));
+  const onDragOver = (e: React.DragEvent) => {
+    e.preventDefault();
+  };
+
+  const columnBorderColor = (color: ColumnDef['color']) =>
+    color === 'default' ? '#9e9e9e' : color === 'primary' ? '#1976d2' : color === 'warning' ? '#f59e0b' : '#10b981';
 
   return (
-    <Box>
-      {/* Header */}
-      <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 3 }}>
-        <Typography variant="h4" sx={{fontWeight: 700, color: 'text.primary'}}>
-          Tasks
-        </Typography>
-        <Chip
-          icon={<FilterIcon size={16} />}
-          label={`${sortedTasks.length} task${sortedTasks.length !== 1 ? 's' : ''}`}
-          color="primary"
-          variant="outlined"
-          sx={{ fontWeight: 500 }}
-        />
-      </Box>
+    <Box sx={{ p: 2 }}>
+      <Typography variant="h4" sx={{ fontWeight: 700, color: 'text.primary', mb: 3 }}>
+        Tasks
+      </Typography>
 
-      {/* Filter & Sort Controls */}
-      <Box
-        sx={{
-          display: 'flex',
-          gap: 2,
-          flexWrap: 'wrap',
-          alignItems: 'center',
-          mb: 3,
-          p: 2,
-          borderRadius: 2,
-          bgcolor: 'action.hover',
-        }}
-      >
-        <FormControl size="small" sx={{ minWidth: 140 }}>
-          <InputLabel>Status</InputLabel>
-          <Select
-            value={filterStatus}
-            label="Status"
-            onChange={(e) => { setFilterStatus(e.target.value as FilterStatus); setPage(1); }}
+      {isLoading && <LinearProgress sx={{ mb: 2 }} />}
+
+      <Box sx={{ display: 'flex', gap: 2, overflowX: 'auto', pb: 2, minHeight: 'calc(100vh - 240px)' }}>
+        {columns.map((col) => (
+          <Box
+            key={col.key}
+            onDragOver={onDragOver}
+            onDrop={() => handleDrop(col.key)}
+            onDragEnter={() => setDroppingColumn(col.key)}
+            onDragLeave={(e) => {
+              const related = e.relatedTarget as Node | null;
+              if (related && col.key !== 'done') {
+                const colEl = e.currentTarget as HTMLElement;
+                if (!colEl.contains(related)) setDroppingColumn(null);
+              }
+            }}
+            sx={{
+              flex: '0 0 320px',
+              display: 'flex',
+              flexDirection: 'column',
+              bgcolor: droppingColumn === col.key
+                ? (mode === 'dark' ? `${col.accent}22` : `${col.accent}15`)
+                : mode === 'dark' ? col.bgDark : col.bgLight,
+              borderRadius: 2,
+              border: `1px solid ${droppingColumn === col.key ? col.accent : 'divider'}`,
+              boxShadow: droppingColumn === col.key ? `0 0 0 1px ${col.accent}40` : undefined,
+              transition: 'background-color 0.15s, border-color 0.15s, box-shadow 0.15s',
+            }}
           >
-            <MenuItem value="all">All</MenuItem>
-            <MenuItem value="inbox">Inbox</MenuItem>
-            <MenuItem value="sent">Sent</MenuItem>
-            <MenuItem value="trash">Trash</MenuItem>
-          </Select>
-        </FormControl>
-
-        <FormControl size="small" sx={{ minWidth: 140 }}>
-          <InputLabel>Sort by</InputLabel>
-          <Select
-            value={sortBy}
-            label="Sort by"
-            onChange={(e) => { setSortBy(e.target.value as SortBy); setPage(1); }}
-          >
-            <MenuItem value="due-date">Due Date</MenuItem>
-            <MenuItem value="priority">Priority</MenuItem>
-            <MenuItem value="subject">Subject</MenuItem>
-          </Select>
-        </FormControl>
-
-        <Button
-          variant="outlined"
-          size="small"
-          startIcon={<ArrowUpDownIcon size={16} />}
-          onClick={toggleSortOrder}
-          sx={{ textTransform: 'none' }}
-        >
-          {sortOrder === 'asc' ? 'Ascending' : 'Descending'}
-        </Button>
-
-        <Box sx={{ flexGrow: 1 }} />
-
-        {/* Quick filter tags */}
-        <Box sx={{ display: 'flex', gap: 0.5 }}>
-          {(['inbox', 'sent', 'trash'] as const).map((status) => (
-            <Chip
-              key={status}
-              label={status.charAt(0).toUpperCase() + status.slice(1)}
-              size="small"
-              variant={filterStatus === status ? 'filled' : 'outlined'}
-              color={status === 'inbox' ? 'primary' : status === 'sent' ? 'success' : 'error'}
-              onClick={() => { setFilterStatus(status); setPage(1); }}
-              sx={{ cursor: 'pointer', fontWeight: 500 }}
-            />
-          ))}
-        </Box>
-      </Box>
-
-      {/* Loading state */}
-      {isLoading && (
-        <Box sx={{ width: '100%', mb: 2 }}>
-          <LinearProgress />
-        </Box>
-      )}
-
-      {/* Empty state */}
-      {!isLoading && sortedTasks.length === 0 && (
-        <Box
-          sx={{
-            display: 'flex',
-            flexDirection: 'column',
-            alignItems: 'center',
-            justifyContent: 'center',
-            py: 8,
-            textAlign: 'center',
-          }}
-        >
-          <XCircleIcon size={48} color="#9e9e9e" />
-          <Typography variant="h6" color="text.secondary" sx={{ mt: 2 }}>
-            No tasks found
-          </Typography>
-          <Typography variant="body2" color="text.secondary">
-            {filterStatus === 'all'
-              ? "You're all caught up! No messages in your inbox."
-              : `No ${filterStatus} messages matching your filter.`}
-          </Typography>
-          {filterStatus !== 'all' && (
-            <Button
-              variant="text"
-              onClick={() => setFilterStatus('all')}
-              sx={{ mt: 2 }}
-            >
-              Clear filters
-            </Button>
-          )}
-        </Box>
-      )}
-
-      {/* Task Cards Grid */}
-      {!isLoading && sortedTasks.length > 0 && (
-        <>
-          <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))', gap: 2 }}>
-            {paginatedTasks.map((task) => (
-              <Card
-                key={task.id}
-                elevation={0}
-                sx={{
-                  border: task.isRead ? 'none' : `2px solid`,
-                  borderColor: task.isRead ? 'divider' : 'primary.main',
-                  borderRadius: 2,
-                  transition: 'box-shadow 0.2s',
-                  '&:hover': { boxShadow: 3 },
-                }}
-              >
-                <CardContent sx={{ pb: 1 }}>
-                  {/* Title */}
-                  <Typography variant="subtitle1" sx={{fontWeight: 600}} noWrap gutterBottom>
-                    {task.title}
-                  </Typography>
-
-                  {/* Meta row */}
-                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, flexWrap: 'wrap', mb: 1 }}>
-                    <Chip
-                      label={task.status}
-                      size="small"
-                      color={task.status === 'inbox' ? 'primary' : task.status === 'sent' ? 'success' : 'error'}
-                      variant="outlined"
-                      sx={{ fontWeight: 500 }}
-                    />
-                    {task.priority === 'high' && (
-                      <Chip
-                        icon={<AlertTriangleIcon size={14} />}
-                        label="High priority"
-                        size="small"
-                        color="error"
-                        variant="outlined"
-                        sx={{ fontWeight: 500 }}
-                      />
-                    )}
-                    {task.starred && (
-                      <FlagIcon size={16} color="#f59e0b" />
-                    )}
-                  </Box>
-
-                  {/* Due date */}
-                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, mb: 1 }}>
-                    <ClockIcon size={14} color="#757575" />
-                    <Typography variant="caption" color="text.secondary">
-                      {task.dueDate ? formatRelativeDate(task.dueDate) : 'No due date'}
-                      {task.dueDate && (
-                        <>
-                          {' • '}
-                          <Typography component="span" variant="caption">
-                            {formatDateAbsolute(task.dueDate)}
-                          </Typography>
-                        </>
-                      )}
-                    </Typography>
-                  </Box>
-
-                  {/* Simulated progress bar */}
-                  <LinearProgress
-                    variant="determinate"
-                    value={task.progress}
-                    sx={{ borderRadius: 1, height: 4 }}
-                    color={task.progress === 100 ? 'success' : 'primary'}
-                  />
-                </CardContent>
-
-                {/* Card Actions */}
-                <CardActions sx={{ px: 2, py: 0.5 }}>
-                  {task.priority === 'high' && (
-                    <Button size="small" startIcon={<AlertTriangleIcon size={14} />} color="error">
-                      Urgent
-                    </Button>
-                  )}
-                  <Box sx={{ flexGrow: 1 }} />
-                  <IconButton size="small" title={task.isRead ? 'Mark unread' : 'Mark read'}>
-                    {task.isRead ? (
-                      <CheckCircleIcon size={16} color="#757575" />
-                    ) : (
-                      <XCircleIcon size={16} color="primary" />
-                    )}
-                  </IconButton>
-                </CardActions>
-              </Card>
-            ))}
-          </Box>
-
-          {/* Pagination */}
-          {totalPages > 1 && (
-            <Box sx={{ display: 'flex', justifyContent: 'center', mt: 4 }}>
-              <Pagination
-                count={totalPages}
-                page={page}
-                onChange={(_, value) => setPage(value)}
-                color="primary"
-                shape="rounded"
-              />
+            <Box sx={{ p: 2, display: 'flex', alignItems: 'center', gap: 1, borderBottom: '1px solid', borderColor: 'divider' }}>
+              <Typography variant="subtitle1" sx={{ fontWeight: 600, color: col.accent, flex: 1 }}>
+                {col.label}
+              </Typography>
+              <Chip label={columns.find((c) => c.key === col.key)?.cards.length ?? '?'} size="small" color={col.color} variant="outlined" />
             </Box>
-          )}
-        </>
-      )}
+
+            <Box sx={{ p: 1.5, display: 'flex', flexDirection: 'column', gap: 1.5, flexGrow: 1, minHeight: 200 }}>
+              {col.cards.map((card) => (
+                <Card
+                  key={`${card.resourceId}:${card.idwf}`}
+                  elevation={draggedId && draggedId.resourceId === card.resourceId && draggedId.idwf === card.idwf ? 4 : 1}
+                  draggable
+                  onDragStart={() => onDragStart(card)}
+                  onDragEnd={onDragEnd}
+                  sx={{
+                    cursor: (card.status === 'pending' && !card.lockedByMe) || card.status === 'validating' || card.status === 'done' ? 'default' : 'grab',
+                    opacity: draggedId && draggedId.resourceId === card.resourceId && draggedId.idwf === card.idwf ? 0.5 : 1,
+                    borderLeft: `4px solid ${columnBorderColor(col.color)}`,
+                    transition: 'box-shadow 0.15s, opacity 0.15s',
+                    '&:hover': { boxShadow: 3 },
+                  }}
+                >
+                  <CardContent sx={{ p: 2, '&:last-child': { pb: 2 } }}>
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1 }}>
+                      <Typography variant="subtitle2" sx={{ fontWeight: 600, flex: 1 }}>{card.title}</Typography>
+                      {card.status !== 'pending' && (
+                        <Chip label={`${card.status} (locked)`} size="small" color="warning" />
+                      )}
+                    </Box>
+
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1 }}>
+                      {card.timeElapsed && (
+                        <Chip label={card.timeElapsed} size="small" variant="outlined" sx={{ fontWeight: 500 }} />
+                      )}
+                    </Box>
+
+                    {card.checkDate && (
+                      <Typography variant="caption" color="text.secondary">
+                        {formatRelativeDate(card.checkDate)}
+                      </Typography>
+                    )}
+                  </CardContent>
+                </Card>
+              ))}
+            </Box>
+          </Box>
+        ))}
+      </Box>
     </Box>
   );
 }
