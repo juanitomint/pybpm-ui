@@ -13,45 +13,19 @@ const ThemeContext = createContext<ThemeContextValue | null>(null);
 export function useDarkMode() {
   const [mode, setMode] = useState<'light' | 'dark'>('light');
 
-    useEffect(() => {
-    const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
-    const savedTheme = localStorage.getItem('theme');
-
-    // Apply explicit user preference if set; otherwise fall back to system default (sync check).
-    if (savedTheme === 'dark') {
-      setMode('dark');
-      document.documentElement.classList.add('dark');
-    } else {
-      const isSystemDark = mediaQuery.matches;
-      if (isSystemDark) {
-        setMode('dark');
-        document.documentElement.classList.add('dark');
-      } else {
-        setMode('light');
-        document.documentElement.classList.remove('dark');
-      }
+  // Sync theme preference after hydration — safe because initial render matches SSR.
+  useEffect(() => {
+    if (typeof localStorage !== 'undefined') {
+      const stored = localStorage.getItem('theme');
+      if (stored === 'light' || stored === 'dark') setMode(stored);
     }
-
-    // Listen for system theme changes (only if no explicit user preference)
-    const handler = (e: MediaQueryListEvent) => {
-      if (!localStorage.getItem('theme')) {
-        setMode(e.matches ? 'dark' : 'light');
-      }
-    };
-    mediaQuery.addEventListener('change', handler);
-    return () => mediaQuery.removeEventListener('change', handler);
-    }, []);
+  }, []);
 
   const toggleTheme = useCallback(() => {
-    setMode(prevMode => {
-      const newMode = prevMode === 'light' ? 'dark' : 'light';
-      localStorage.setItem('theme', newMode);
-      if (newMode === 'dark') {
-        document.documentElement.classList.add('dark');
-      } else {
-        document.documentElement.classList.remove('dark');
-      }
-      return newMode;
+    setMode((prev) => {
+      const next = prev === 'light' ? 'dark' : 'light';
+      if (typeof localStorage !== 'undefined') localStorage.setItem('theme', next);
+      return next;
     });
   }, []);
 

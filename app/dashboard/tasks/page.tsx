@@ -135,7 +135,7 @@ export default function TasksPage() {
 
   const { data: inProgressData } = useQuery({
     queryKey: QUERY_KEYS.in_progress,
-    queryFn: () => fetchTasksList('user'),
+    queryFn: () => fetchTasksList('in_progress'),
     select: (data) => ({ ...data, _lockedOnly: true }),
   });
 

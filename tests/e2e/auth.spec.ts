@@ -30,7 +30,7 @@ test.describe('Authentication (F1)', () => {
       await page.waitForURL(/\/dashboard/, { timeout: 15000 });
       
       const currentUrl = page.url();
-      expect(currentUrl).toContain('/dashboard/');
+      expect(currentUrl).toMatch(/\/dashboard/);
       
       console.log('✓ Login successful, redirected to:', currentUrl);
     } catch (e) {

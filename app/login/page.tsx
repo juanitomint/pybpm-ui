@@ -106,8 +106,8 @@ function LoginPageContent() {
             required
             placeholder="Enter your password"
           />
-
           <Button
+            type="submit"
             fullWidth
             variant="contained"
             size="large"

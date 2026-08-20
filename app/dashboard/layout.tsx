@@ -123,7 +123,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
 
           {/* Theme toggle */}
           <IconButton onClick={toggleTheme} size="small">
-            {themeIcon}
+            <span suppressHydrationWarning>{themeIcon}</span>
           </IconButton>
 
           {/* Profile menu */}
