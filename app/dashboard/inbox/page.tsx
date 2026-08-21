@@ -243,7 +243,7 @@ export default function InboxPage() {
 
         {searchTerm && (
           <>
-            <Chip label={`Search: "${searchTerm}"`} onDelete={() => setSearchTerm('')} size="small" color="info" variant="outlined" />
+            <Chip label={`Search: "${searchTerm}"`} onDelete={() => setSearchTerm('')} color="info" variant="outlined" />
             <Button size="small" onClick={() => setSearchTerm('')}>Clear</Button>
           </>
         )}
@@ -303,12 +303,12 @@ export default function InboxPage() {
                     }
                     secondary={
                       <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, mt: 0.25 }}>
-                        <Chip label={formatSender(msg.from_user)} size="small" variant="outlined" color="info" />
+                        <Chip label={formatSender(msg.from_user)} variant="outlined" color="info" sx={{ py: 1, px: 1.5 }} />
                         <Typography variant="caption" color="text.secondary">
                           {msg.tag && (
                             <>
                               · Tagged as{" "}
-                              <Chip label={msg.tag} size="small" sx={{ height: 18, fontSize: '0.7rem' }} />
+                              <Chip label={msg.tag} variant="outlined" color="success" />
                             </>
                           )}
                         </Typography>

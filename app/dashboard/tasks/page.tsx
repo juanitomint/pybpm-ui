@@ -230,7 +230,7 @@ export default function TasksPage() {
       if (from !== targetStatus && from === 'pending' && targetStatus === 'in_progress') {
         await api.patch('/dashboard/tasks/lock', {
           resource_id: card.resourceId,
-          case_id: card.case_id,
+          case_id: card.caseId,
           idwf: card.idwf,
         });
       } else if (from !== targetStatus && from === 'in_progress' && targetStatus === 'pending') {
@@ -300,7 +300,7 @@ export default function TasksPage() {
               <Typography variant="subtitle1" sx={{ fontWeight: 600, color: col.accent, flex: 1 }}>
                 {col.label}
               </Typography>
-              <Chip label={columns.find((c) => c.key === col.key)?.cards.length ?? '?'} size="small" color={col.color} variant="outlined" />
+              <Chip label={columns.find((c) => c.key === col.key)?.cards.length ?? '?'} color={col.color} variant="outlined" />
             </Box>
 
             <Box sx={{ p: 1.5, display: 'flex', flexDirection: 'column', gap: 1.5, flexGrow: 1, minHeight: 200 }}>
@@ -323,13 +323,13 @@ export default function TasksPage() {
                     <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1 }}>
                       <Typography variant="subtitle2" sx={{ fontWeight: 600, flex: 1 }}>{card.title}</Typography>
                       {card.status !== 'pending' && (
-                        <Chip label={`${card.status} (locked)`} size="small" color="warning" />
+                        <Chip label={`${card.status} (locked)`} color="warning" />
                       )}
                     </Box>
 
                     <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1 }}>
                       {card.timeElapsed && (
-                        <Chip label={card.timeElapsed} size="small" variant="outlined" sx={{ fontWeight: 500 }} />
+                        <Chip label={card.timeElapsed} variant="outlined" sx={{ fontWeight: 500, py: 0.75 }} />
                       )}
                     </Box>
 
@@ -338,6 +338,17 @@ export default function TasksPage() {
                         {formatRelativeDate(card.checkDate)}
                       </Typography>
                     )}
+                    <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1, mt: 1 }}>
+                      {['resource_id', 'case_id', 'idwf'].map((key) => (
+                        <Chip
+                          key={key}
+                          label={`${key}=${card[key === 'resource_id' ? 'resourceId' : key === 'case_id' ? 'caseId' : 'idwf']}`}
+                          variant="outlined"
+                          color="secondary"
+                          sx={{ fontFamily: 'monospace', py: 0.75, px: 1 }}
+                        />
+                      ))}
+                    </Box>
                   </CardContent>
                 </Card>
               ))}

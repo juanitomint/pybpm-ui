@@ -113,6 +113,51 @@ npm run format     # Prettier formatting
 - **Port 3001+** — Use for test runs, CI jobs, background processes, or any non-primary service that needs a HTTP listener. Always pass `PORT=3001` (or higher) explicitly when launching test instances.
 
 This prevents accidental shutdown of the dev server during testing workflows and keeps production deployments stable.
+## Testing
+
+E2E tests use [Playwright](https://playwright.dev/) and live under `tests/e2e/`. Run from the repo root (`pybpm-ui/`):
+
+```bash
+npx playwright test                  # run all E2E suites
+npx playwright test login            # run only the login suite
+npx playwright test --grep "dashboard"  # filter by title tag
+npx playwright test --headed         # open browser UI (interactive)
+npx playwright test --debug          # launch Inspector + paused execution
+```
+
+### Screenshots & traces
+
+The Playwright config (`playwright.config.ts`) captures:
+
+| Asset | When captured | Location |
+|---|---|---|
+| **Screenshot** | on test failure only | `@test-results/<suite>-<test>-attempt-<N>.png` |
+| **Trace (zip)** | on retry (CI: 2 retries) | `@test-results/trace.zip` per attempt |
+| **Video** | not configured — add to capture full runs | `npx playwright show-trace @test-results/<trace>` |
+
+To always capture screenshots regardless of pass/fail, set the environment variable:
+```bash
+npx playwright test --screenshot=on   # screenshot every run
+npx playwright test --screenshot=only-on-failure  # default (matches config)
+```
+
+Screenshots and traces land in `@test-results/` — committed to `.gitignore` via the Playwright defaults. Inspect failures with:
+
+```bash
+npx playwright show-report @test-results   # HTML report
+npx playwright show-trace @test-results/<trace>  # trace viewer
+```
+
+### Running against a dev server
+
+Tests expect `next dev` on port **3000**. Start it in one terminal before running:
+
+```bash
+npm run dev          # ← one terminal, keep alive
+npx playwright test  # ← another terminal
+```
+
+CI runs against the same URL but retries flaky tests (2×) with full traces.
 
 ## Git & Commits
 

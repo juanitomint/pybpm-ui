@@ -119,7 +119,7 @@ export default function MessageDetailPage() {
 
       {/* Metadata row */}
       <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, flexWrap: 'wrap', mb: 3 }}>
-        <Chip label={message.folder} size="small" variant="outlined" />
+        <Chip label={message.folder} variant="outlined" />
         {message.from_user !== null && (
           <>
             <Typography variant="body2" color="text.secondary">From</Typography>

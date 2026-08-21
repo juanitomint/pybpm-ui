@@ -13,6 +13,7 @@ export default defineConfig({
     screenshot: 'only-on-failure',
     actionTimeout: 5000,
     navigationTimeout: 10000,
+    screenshotOutputDir: '@test-results/',
   },
   testIgnore: /test-results/,
 });
