@@ -7,6 +7,8 @@ import Card from '@mui/material/Card';
 import CardContent from '@mui/material/CardContent';
 import Chip from '@mui/material/Chip';
 import LinearProgress from '@mui/material/LinearProgress';
+import Snackbar from '@mui/material/Snackbar';
+import Alert from '@mui/material/Alert';
 import { useTheme } from '../../providers';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 
@@ -118,6 +120,11 @@ async function transitionTask(resourceId: string, idwf: string, targetStatus: Ka
 export default function TasksPage() {
   const [draggedId, setDraggedId] = useState<{ resourceId: string; idwf: string } | null>(null);
   const [droppingColumn, setDroppingColumn] = useState<KanbanStatus | null>(null);
+  const [notification, setNotification] = useState<{ open: boolean; message: string; severity: 'error' | 'warning' | 'info' }>({ 
+    open: false, 
+    message: '', 
+    severity: 'info' 
+  });
   const queryClient = useQueryClient();
   const { mode } = useTheme();
 
@@ -229,7 +236,7 @@ export default function TasksPage() {
       } else if (from !== targetStatus && from === 'in_progress' && targetStatus === 'pending') {
         await api.patch('/dashboard/tasks/unlock', {
           resource_id: card.resourceId,
-          caseId: card.caseId,
+          case_id: card.caseId,
           idwf: card.idwf,
         });
       }
@@ -237,6 +244,11 @@ export default function TasksPage() {
       transitionMutation.mutate({ resourceId: card.resourceId, idwf: card.idwf, targetStatus });
     } catch (err) {
       console.warn('[Kanban] Pre-transition step failed:', err);
+      setNotification({ 
+        open: true, 
+        message: `Failed to ${from} → ${targetStatus}. Please try again.`, 
+        severity: 'error' 
+      });
     } finally {
       setDraggedId(null);
     }
@@ -333,6 +345,22 @@ export default function TasksPage() {
           </Box>
         ))}
       </Box>
+      
+      <Snackbar 
+        open={notification.open} 
+        autoHideDuration={6000} 
+        onClose={() => setNotification(prev => ({ ...prev, open: false }))}
+        anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
+      >
+        <Alert 
+          onClose={() => setNotification(prev => ({ ...prev, open: false }))} 
+          severity={notification.severity} 
+          variant="filled" 
+          sx={{ width: '100%' }}
+        >
+          {notification.message}
+        </Alert>
+      </Snackbar>
     </Box>
   );
 }
