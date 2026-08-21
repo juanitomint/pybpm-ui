@@ -7,3 +7,4 @@ htmlcov/
 *.pyc
 .env
 .next/
+node_modules/
