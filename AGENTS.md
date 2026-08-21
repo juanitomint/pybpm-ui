@@ -45,7 +45,7 @@ Each column has its own query. Tasks are loaded separately per column — never 
 
 | Column | Filter | API behavior |
 |--------|--------|-------------|
-| **Pending** | `status = 'user'` AND token is **not locked** | GET `/dashboard/tasks/pending/{idwf}/{caseId}` (or equivalent paginated endpoint) — returns unlocked tokens assigned to the current user |
+| **Pending** | `status = 'user'` AND token is **not locked** | GET `/dashboard/tasks` (or equivalent paginated endpoint) — returns unlocked tokens assigned to the current user |
 | **In-progress** | `status = 'user'` AND token is **locked** by the current user | GET same endpoint, filter locally for `lockedBy === currentUser.id`; or use a dedicated `/tasks/progressing` endpoint if one exists |
 | **Validating** | `status = 'validating'` | GET with status filter; returned as its own list (separate query from pending/in-progress) |
 | **Done** | `status = 'done'` | Separate query entirely — do not mix done tasks into the other columns |
@@ -106,6 +106,13 @@ npm start          # Serves production build on :3000
 npm run lint       # ESLint checks
 npm run format     # Prettier formatting
 ```
+
+### Port Conventions
+
+- **Port 3000** — Reserved for the Next.js development server (`next dev`) and production builds. **Never kill or override port 3000** in tests, scripts, or automation.
+- **Port 3001+** — Use for test runs, CI jobs, background processes, or any non-primary service that needs a HTTP listener. Always pass `PORT=3001` (or higher) explicitly when launching test instances.
+
+This prevents accidental shutdown of the dev server during testing workflows and keeps production deployments stable.
 
 ## Git & Commits
 
