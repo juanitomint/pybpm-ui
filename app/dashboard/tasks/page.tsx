@@ -24,9 +24,9 @@ interface TaskListItem {
   locked: boolean;
   locked_by_nick: string | null;
   checkDate: string | null;
-  timeElapsed: string;
-  modelName: string;
-  caseId: string;
+  time_elapsed: string;
+  model_name: string;
+  case_id: string;
 }
 
 interface TasksListResponse {
@@ -91,21 +91,14 @@ const COLUMNS: ColumnDef[] = [
   { key: 'done', label: 'Done', color: 'success', accent: '#10b981', bgLight: '#e8f5e9', bgDark: '#071a0e' },
 ];
 
-const QUERY_KEYS = {
-  all: ['dashboard-tasks'] as const,
-  pending: ['tasks', 'pending'] as const,
-  in_progress: ['tasks', 'in_progress'] as const,
-  validating: ['tasks', 'validating'] as const,
-  done: ['tasks', 'done'] as const,
-};
+const TASKS_QUERY_KEY = ['dashboard-tasks'] as const;
 
 // --- Backend calls ------------------------------------------------------- //
 
-async function fetchTasksList(statusFilter?: string): Promise<TasksListResponse> {
+async function fetchTasksList(): Promise<TasksListResponse> {
   const baseUrl = process.env.NEXT_PUBLIC_PYBPM_API_URL || 'http://localhost:5000';
   const token = localStorage.getItem('token');
   const params = new URLSearchParams({ page: '1', per_page: '99' });
-  if (statusFilter) params.set('status', statusFilter);
   const res = await fetch(`${baseUrl}/dashboard/tasks?${params.toString()}`, {
     headers: token ? { Authorization: `Bearer ${token}` } : {},
   });
@@ -128,64 +121,50 @@ export default function TasksPage() {
   const queryClient = useQueryClient();
   const { mode } = useTheme();
 
-   const { data: pendingData, isLoading: loadingPending } = useQuery({
-     queryKey: QUERY_KEYS.pending,
-     queryFn: () => fetchTasksList(),
-   });
-
-  const { data: inProgressData } = useQuery({
-    queryKey: QUERY_KEYS.in_progress,
-    queryFn: () => fetchTasksList('in_progress'),
-    select: (data) => ({ ...data, _lockedOnly: true }),
+  const { data: allData, isLoading } = useQuery({
+    queryKey: TASKS_QUERY_KEY,
+    queryFn: fetchTasksList,
   });
 
-  const { data: validatingData } = useQuery({
-    queryKey: QUERY_KEYS.validating,
-    queryFn: () => fetchTasksList('validating'),
-  });
-
-  const { data: doneData } = useQuery({
-    queryKey: QUERY_KEYS.done,
-    queryFn: () => fetchTasksList('done'),
-  });
-
-  const isLoading = loadingPending;
-
-  const seededBoard: KanbanCard[] = useMemo(() => {
-    const seed = (items: TaskListItem[], status: KanbanStatus): KanbanCard[] => items.map((t) => ({
-      resourceId: t.resourceId,
-      idwf: t.idwf,
-      title: t.title || '(no title)',
-      status,
-      lockedByMe: !!t.locked_by,
-      checkDate: t.checkDate ? new Date(t.checkDate) : null,
-      timeElapsed: t.timeElapsed,
-      modelName: t.modelName,
-      caseId: t.caseId,
-    }));
-
-    const all = [
-      ...seed(pendingData?.tasks ?? [], 'pending'),
-      ...seed(inProgressData?.tasks ?? [], 'in_progress'),
-      ...seed(validatingData?.tasks ?? [], 'validating'),
-      ...seed(doneData?.tasks ?? [], 'done'),
-    ];
-
+  const seededBoard = useMemo(() => {
+    const items = allData?.tasks ?? [];
     const seen = new Set<string>();
-    return all.filter((c) => {
-      const key = `${c.resourceId}:${c.idwf}`;
+    return [
+      ...items.filter((t) => t.status === 'user' && !t.locked).map((t) => ({
+        resourceId: t.resourceId, idwf: t.idwf, title: t.title || '(no title)',
+        status: 'pending' as KanbanStatus, lockedByMe: !!t.locked_by,
+        checkDate: t.checkDate ? new Date(t.checkDate) : null, timeElapsed: t.time_elapsed,
+        modelName: t.model_name, caseId: t.case_id,
+      })),
+      ...items.filter((t) => t.status === 'user' && t.locked).map((t) => ({
+        resourceId: t.resourceId, idwf: t.idwf, title: t.title || '(no title)',
+        status: 'in_progress' as KanbanStatus, lockedByMe: !!t.locked_by,
+        checkDate: t.checkDate ? new Date(t.checkDate) : null, timeElapsed: t.time_elapsed,
+        modelName: t.model_name, caseId: t.case_id,
+      })),
+      ...items.filter((t) => t.status === 'validating').map((t) => ({
+        resourceId: t.resourceId, idwf: t.idwf, title: t.title || '(no title)',
+        status: 'validating' as KanbanStatus, lockedByMe: !!t.locked_by,
+        checkDate: t.checkDate ? new Date(t.checkDate) : null, timeElapsed: t.time_elapsed,
+        modelName: t.model_name, caseId: t.case_id,
+      })),
+      ...items.filter((t) => t.status === 'done').map((t) => ({
+        resourceId: t.resourceId, idwf: t.idwf, title: t.title || '(no title)',
+        status: 'done' as KanbanStatus, lockedByMe: !!t.locked_by,
+        checkDate: t.checkDate ? new Date(t.checkDate) : null, timeElapsed: t.time_elapsed,
+        modelName: t.model_name, caseId: t.case_id,
+      })),
+    ].filter((card) => {
+      const key = `${card.resourceId}:${card.caseId}`;
       if (seen.has(key)) return false;
       seen.add(key);
       return true;
     });
-  }, [pendingData, inProgressData, validatingData, doneData]);
-
-  const columns = useMemo(() => {
-    return COLUMNS.map((col) => ({
-      ...col,
-      cards: seededBoard.filter((c) => c.status === col.key),
-    }));
-  }, [seededBoard]);
+  }, [allData]);
+  const columns = useMemo(() => COLUMNS.map((col) => ({
+    ...col,
+    cards: seededBoard.filter((c) => c.status === col.key),
+  })), [seededBoard]);
 
   // --- Mutations (useMutation per AGENTS.md) --------------------------- //
 
@@ -193,26 +172,20 @@ export default function TasksPage() {
     mutationFn: ({ resourceId, idwf, targetStatus }: { resourceId: string; idwf: string; targetStatus: KanbanStatus }) =>
       transitionTask(resourceId, idwf, targetStatus),
     onMutate: async ({ resourceId, idwf, targetStatus }) => {
-      const previousBoard = queryClient.getQueryData<KanbanCard[]>(QUERY_KEYS.all);
+      const previousBoard = queryClient.getQueryData<KanbanCard[]>(TASKS_QUERY_KEY);
       if (previousBoard) {
         queryClient.setQueryData(
-          QUERY_KEYS.all,
+          TASKS_QUERY_KEY,
           previousBoard.map((c) =>
             c.resourceId === resourceId && c.idwf === idwf ? { ...c, status: targetStatus } : c,
           ),
         );
       }
 
-      await queryClient.cancelQueries({ queryKey: QUERY_KEYS[targetStatus] });
-
       return { resourceId, idwf };
     },
-    onSuccess: async (_data, variables) => {
-      const { targetStatus } = variables;
-      await queryClient.invalidateQueries({ queryKey: QUERY_KEYS[targetStatus] });
-    },
     onSettled: async () => {
-      await queryClient.invalidateQueries({ queryKey: QUERY_KEYS.all });
+      await queryClient.invalidateQueries({ queryKey: TASKS_QUERY_KEY });
     },
     onError: (err, _variables) => {
       const axiosErr = err as { response?: { status?: number }; message?: string };
@@ -250,11 +223,13 @@ export default function TasksPage() {
       if (from !== targetStatus && from === 'pending' && targetStatus === 'in_progress') {
         await api.patch('/dashboard/tasks/lock', {
           resource_id: card.resourceId,
+          case_id: card.case_id,
           idwf: card.idwf,
         });
       } else if (from !== targetStatus && from === 'in_progress' && targetStatus === 'pending') {
         await api.patch('/dashboard/tasks/unlock', {
           resource_id: card.resourceId,
+          caseId: card.caseId,
           idwf: card.idwf,
         });
       }
@@ -319,7 +294,7 @@ export default function TasksPage() {
             <Box sx={{ p: 1.5, display: 'flex', flexDirection: 'column', gap: 1.5, flexGrow: 1, minHeight: 200 }}>
               {col.cards.map((card) => (
                 <Card
-                  key={`${card.resourceId}:${card.idwf}`}
+                  key={`${card.resourceId}:${card.caseId}`}
                   elevation={draggedId && draggedId.resourceId === card.resourceId && draggedId.idwf === card.idwf ? 4 : 1}
                   draggable
                   onDragStart={() => onDragStart(card)}
