@@ -40,14 +40,6 @@ interface TasksListResponse {
 }
 
 type KanbanStatus = 'pending' | 'in_progress' | 'validating' | 'done';
-
-const STATUS_TO_BACKEND: Record<KanbanStatus, string> = {
-  pending: 'user',
-  in_progress: 'user',
-  validating: 'validating',
-  done: 'done',
-};
-
 interface KanbanCard {
   resourceId: string;
   idwf: string;
@@ -98,7 +90,7 @@ const TASKS_QUERY_KEY = ['dashboard-tasks'] as const;
 // --- Backend calls ------------------------------------------------------- //
 
 async function fetchTasksList(): Promise<TasksListResponse> {
-  const baseUrl = process.env.NEXT_PUBLIC_PYBPM_API_URL || 'http://localhost:5000';
+  const baseUrl = 'http://localhost:5000';
   const token = localStorage.getItem('token');
   const params = new URLSearchParams({ page: '1', per_page: '99' });
   const res = await fetch(`${baseUrl}/dashboard/tasks?${params.toString()}`, {
@@ -106,14 +98,21 @@ async function fetchTasksList(): Promise<TasksListResponse> {
   });
   return res.json();
 }
-async function transitionTask(resourceId: string, idwf: string, targetStatus: KanbanStatus): Promise<void> {
-  const res = await api.patch('/dashboard/tasks/status', {
-    resource_id: resourceId,
-    idwf,
-    target_status: STATUS_TO_BACKEND[targetStatus],
-  });
-  if (res.status >= 400) throw new Error(`transition failed: ${res.status}`);
+async function transitionTask(resourceId: string, idwf: string, targetStatus: KanbanStatus, caseId: string): Promise<void> {
+  const body = { resource_id: resourceId, case_id: caseId, idwf };
+  
+  if (targetStatus === 'in_progress') {
+    const lockRes = await api.patch('/dashboard/tasks/lock', body);
+    if (lockRes.status >= 400) throw new Error(`lock failed: ${lockRes.status}`);
+  } else if (targetStatus === 'pending') {
+    const unlockRes = await api.patch('/dashboard/tasks/unlock', body);
+    if (unlockRes.status >= 400) throw new Error(`unlock failed: ${unlockRes.status}`);
+  } else if (targetStatus === 'done') {
+    const doneRes = await api.patch('/dashboard/tasks/done', body);
+    if (doneRes.status >= 400) throw new Error(`task completion failed: ${doneRes.status}`);
+  }
 }
+
 
 // --- Component ----------------------------------------------------------- //
 
@@ -176,30 +175,21 @@ export default function TasksPage() {
   // --- Mutations (useMutation per AGENTS.md) --------------------------- //
 
   const transitionMutation = useMutation({
-    mutationFn: ({ resourceId, idwf, targetStatus }: { resourceId: string; idwf: string; targetStatus: KanbanStatus }) =>
-      transitionTask(resourceId, idwf, targetStatus),
-    onMutate: async ({ resourceId, idwf, targetStatus }) => {
-      const previousBoard = queryClient.getQueryData<KanbanCard[]>(TASKS_QUERY_KEY);
-      if (previousBoard) {
-        queryClient.setQueryData(
-          TASKS_QUERY_KEY,
-          previousBoard.map((c) =>
-            c.resourceId === resourceId && c.idwf === idwf ? { ...c, status: targetStatus } : c,
-          ),
-        );
-      }
-
-      return { resourceId, idwf };
-    },
+    mutationFn: ({ resourceId, idwf, targetStatus, caseId }: { resourceId: string; idwf: string; targetStatus: KanbanStatus; caseId: string }) =>
+      transitionTask(resourceId, idwf, targetStatus, caseId),
     onSettled: async () => {
       await queryClient.invalidateQueries({ queryKey: TASKS_QUERY_KEY });
     },
-    onError: (err, _variables) => {
+    onError: (err, variables) => {
       const axiosErr = err as { response?: { status?: number }; message?: string };
+      const targetStatus = (variables as { targetStatus: KanbanStatus }).targetStatus;
       if (axiosErr.response?.status === 409) {
-        console.warn('[Kanban] 409 Conflict — likely already locked by another user');
+        setNotification({ open: true, message: 'Task is already locked by another user', severity: 'warning' });
+      } else if (targetStatus === 'pending') {
+        setNotification({ open: true, message: `Failed to unlock task. Please try again.`, severity: 'error' });
       } else {
-        console.warn('[Kanban] Transition failed:', axiosErr.message ?? err);
+        const label = axiosErr.message ?? String(err);
+        setNotification({ open: true, message: `Transition failed: ${label}`, severity: 'error' });
       }
     },
   });
@@ -223,32 +213,9 @@ export default function TasksPage() {
     if (!card) return;
 
     setDroppingColumn(null);
-    const from = card.status;
 
     try {
-      // AGENTS.md: pending → in_progress requires lock first.
-      if (from !== targetStatus && from === 'pending' && targetStatus === 'in_progress') {
-        await api.patch('/dashboard/tasks/lock', {
-          resource_id: card.resourceId,
-          case_id: card.caseId,
-          idwf: card.idwf,
-        });
-      } else if (from !== targetStatus && from === 'in_progress' && targetStatus === 'pending') {
-        await api.patch('/dashboard/tasks/unlock', {
-          resource_id: card.resourceId,
-          case_id: card.caseId,
-          idwf: card.idwf,
-        });
-      }
-
-      transitionMutation.mutate({ resourceId: card.resourceId, idwf: card.idwf, targetStatus });
-    } catch (err) {
-      console.warn('[Kanban] Pre-transition step failed:', err);
-      setNotification({ 
-        open: true, 
-        message: `Failed to ${from} → ${targetStatus}. Please try again.`, 
-        severity: 'error' 
-      });
+      transitionMutation.mutate({ resourceId: card.resourceId, idwf: card.idwf, targetStatus, caseId: card.caseId });
     } finally {
       setDraggedId(null);
     }

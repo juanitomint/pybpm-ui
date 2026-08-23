@@ -1,7 +1,7 @@
 import axios from 'axios';
 
 const api = axios.create({
-  baseURL: process.env.NEXT_PUBLIC_PYBPM_API_URL || 'http://localhost:5000',
+  baseURL: process.env.PYBPM_API_URL || 'http://localhost:5000',
 });
 
 // Request interceptor - add auth token to all requests
@@ -26,8 +26,9 @@ api.interceptors.response.use(
   (response) => response,
   (error) => {
     if (error.response?.status === 401) {
-      console.error('[API Client] 401 Unauthorized - clearing token');
+      console.error('[API Client] 401 Unauthorized - clearing token and redirecting to login');
       localStorage.removeItem('token');
+      window.location.href = '/login';
     }
     return Promise.reject(error);
   },

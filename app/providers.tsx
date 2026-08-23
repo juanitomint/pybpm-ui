@@ -1,7 +1,9 @@
-'use client';
+"use client";
 import { createContext, useContext, useState, useEffect, useCallback, useMemo } from 'react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { ThemeProvider as MuiThemeProvider, createTheme } from '@mui/material/styles';
+import { CacheProvider } from '@emotion/react';
+import createCache from '@emotion/cache';
 
 // Theme context — shared state for dark mode across all consumers
 interface ThemeContextValue {
@@ -51,6 +53,7 @@ function ThemedProviders({ children }: { children: React.ReactNode }) {
     </ThemeContext.Provider>
   );
 }
+const emotionCache = createCache({ key: 'mui', prepend: true });
 
 export default function Providers({ children }: { children: React.ReactNode }) {
   const [queryClient] = useState(
@@ -66,8 +69,10 @@ export default function Providers({ children }: { children: React.ReactNode }) {
   );
 
   return (
-    <QueryClientProvider client={queryClient}>
-      <ThemedProviders>{children}</ThemedProviders>
-    </QueryClientProvider>
+    <CacheProvider value={emotionCache}>
+      <QueryClientProvider client={queryClient}>
+        <ThemedProviders>{children}</ThemedProviders>
+      </QueryClientProvider>
+    </CacheProvider>
   );
 }

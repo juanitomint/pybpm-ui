@@ -29,7 +29,7 @@ pybpm-ui/
 │   │   └── client.ts       # Axios instance with JWT interceptor and 401 redirect
 │   └── hooks/
 │       └── useAuth.ts      # Auth state: login/logout/me via pybpm-api /auth/* endpoints
-├── next.config.ts          # Next.js config — API proxy in dev mode
+├── next.config.mjs          # Next.js config (no rewrites — API calls go direct to pybpm-api)
 ├── postcss.config.mjs      # Tailwind CSS v4 PostCSS plugin
 ├── tsconfig.json           # TypeScript strict config for Next.js App Router
 └── package.json            # Dependencies (React, Next.js, TanStack Query, Axios, Tailwind)
@@ -58,8 +58,8 @@ All transitions use `PATCH /dashboard/tasks/{idtoken}/status` with body `{ targe
 
 | Transition | Action on API |
 |-----------|---------------|
-| **pending → in-progress** | Lock the task first (set `lockedBy = currentUser.id`, `lockTimestamp = now`), then call PATCH with `target_status: "user"`. The lock tells other users this person is working on it. |
-| **in-progress → pending** | Unlock the task (clear `lockedBy` and `lockTimestamp`), then call PATCH with `target_status: "user"`. The task returns to the pending pool for reassignment. |
+| **pending → in-progress** | `transitionTask` calls `PATCH /dashboard/tasks/lock` first (sets `lockedBy = currentUser.id`, `lockTimestamp = now`), then PATCH with `target_status: "user"`. The lock tells other users this person is working on it. |
+| **in-progress → pending** | `transitionTask` calls `PATCH /dashboard/tasks/unlock` first (clears `lockedBy` and `lockTimestamp`), then PATCH with `target_status: "user"`. The task returns to the pending pool for reassignment. |
 | **in-progress → validating** | Call PATCH with `target_status: "validating"`. No lock change needed — the validator takes over from here. |
 | **validating → in-progress** | Call PATCH with `target_status: "user"` and re-lock the task if returning to the original owner, or leave unlocked for reassignment. The status reverts so it appears back in pending/in-progress columns. |
 
@@ -70,9 +70,41 @@ All transitions use `PATCH /dashboard/tasks/{idtoken}/status` with body `{ targe
 - Handle 409 Conflict if a user tries to lock a task already locked by another user — show a toast and refresh the pending list.
 - The `TaskListItem` schema from pybpm-api carries three lock-related fields: ``locked_by`` (int | null, raw FK for local filtering — compare against ``currentUser.id`` to determine in-progress vs pending), ``locked`` (bool), and ``locked_by_nick`` (str | null, display name).
 
-## Connecting to the API
+## API Access Pattern (Direct Backend Calls)
 
-In development mode, `next dev` proxies `/api/*` requests to `pybpm-api-app:5000` (Docker Compose service). In production, a reverse proxy (nginx/Caddy) serves both frontend and API.
+PyBPM-UI calls pybpm-api **directly** — never through Next.js rewrites or proxy routes.
+
+ Read `PYBPM_API_URL` from `.env`; fall back to `http://localhost:5000` in client code (`src/api/client.ts`, any raw `fetch()` call).
+ Use `PYBPM_API_URL` (from `.env`) as the backend URL. Never expose it via `NEXT_PUBLIC_*` — that leaks into the browser bundle and forces a recompile on change.
+### Verifying request payloads
+
+Before writing or changing any API call, fetch pybpm-api's OpenAPI schema to confirm exact field names, types, and required/optional status:
+
+```bash
+# From pybpm-ui/, uses PYBPM_API_URL from .env (no NEXT_PUBLIC_ leak):
+curl -s ${PYBPM_API_URL}/openapi.json | python3 -c "import sys,json; [print(p, '→', json.dumps(next((op['requestBody']['content']['application/json']['schema'] for op in m.get('operations',[{}]) if op.get('operationId')=='lock_task'),{}))) for p,m in sorted(json.load(sys.stdin)['paths'].items())]"
+```
+
+Use this as ground truth — do not guess body shapes from memory or legacy PHP code. If the schema disagrees with what you assumed, trust the schema and update the caller.
+
+### Example: Axios client (`src/api/client.ts`)
+
+```ts
+import axios from 'axios';
+
+const api = axios.create({ baseURL: process.env.PYBPM_API_URL || 'http://localhost:5000' });
+// interceptors ...
+export default api;
+```
+
+### Example: Raw fetch in a Server Component / Server Action
+
+```ts
+const res = await fetch(`${process.env.PYBPM_API_URL}/dashboard/tasks`, { headers: { cookie } });
+```
+
+Keep `next.config.mjs` rewrite rules empty — no `/api/*` → backend rewrites, no `/dashboard/*` proxies. The browser hits pybpm-api straight on port 5000; Next.js only serves static assets and SSR pages from port 3000.
+
 
 Key pybpm-api endpoints this UI will consume:
 
@@ -90,7 +122,7 @@ Key pybpm-api endpoints this UI will consume:
 
 ```bash
 npm install
-npm run dev        # Starts Next.js dev server on :3000 with proxy to pybpm-api
+npm run dev        # Starts Next.js dev server on :3000; client code calls pybpm-api directly on :5000
 ```
 
 ### Build & Start
