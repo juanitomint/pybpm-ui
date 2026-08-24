@@ -108,9 +108,9 @@ async function transitionTask(resourceId: string, idwf: string, targetStatus: Ka
   } else if (targetStatus === 'pending') {
     const unlockRes = await api.patch('/dashboard/tasks/unlock', body);
     if (unlockRes.status >= 400) throw new Error(`unlock failed: ${unlockRes.status}`);
-  } else if (targetStatus === 'done') {
-    const doneRes = await api.patch('/dashboard/tasks/done', body);
-    if (doneRes.status >= 400) throw new Error(`task completion failed: ${doneRes.status}`);
+  } else if (targetStatus === 'validating') {
+    const valRes = await api.patch('/dashboard/tasks/validate', body);
+    if (valRes.status >= 400) throw new Error(`validate failed: ${valRes.status}`);
   }
 }
 
@@ -118,7 +118,7 @@ async function transitionTask(resourceId: string, idwf: string, targetStatus: Ka
 // --- Component ----------------------------------------------------------- //
 
 export default function TasksPage() {
-  const [draggedId, setDraggedId] = useState<{ resourceId: string; idwf: string } | null>(null);
+  const [draggedId, setDraggedId] = useState<{ resourceId: string; idwf: string; caseId: string } | null>(null);
   const [droppingColumn, setDroppingColumn] = useState<KanbanStatus | null>(null);
   const [notification, setNotification] = useState<{ open: boolean; message: string; severity: 'error' | 'warning' | 'info' }>({ 
     open: false, 
@@ -198,18 +198,14 @@ export default function TasksPage() {
   // --- Drag handlers --------------------------------------------------- //
 
   const onDragStart = (card: KanbanCard) => {
-    setDraggedId({ resourceId: card.resourceId, idwf: card.idwf });
+    setDraggedId({ resourceId: card.resourceId, idwf: card.idwf, caseId: card.caseId });
   };
 
-  const onDragEnd = () => {
-    setDraggedId(null);
-    setDroppingColumn(null);
-  };
 
   const handleDrop = async (targetStatus: KanbanStatus) => {
     if (!draggedId || droppingColumn !== targetStatus) return;
     const card = seededBoard.find(
-      (c) => c.resourceId === draggedId.resourceId && c.idwf === draggedId.idwf,
+      (c) => c.resourceId === draggedId.resourceId && c.idwf === draggedId.idwf && c.caseId === draggedId.caseId,
     );
     if (!card) return;
 
@@ -275,13 +271,16 @@ export default function TasksPage() {
               {col.cards.map((card) => (
                 <Card
                   key={`${card.resourceId}:${card.caseId}`}
-                  elevation={draggedId && draggedId.resourceId === card.resourceId && draggedId.idwf === card.idwf ? 4 : 1}
+                  elevation={draggedId && draggedId.resourceId === card.resourceId && draggedId.idwf === card.idwf && draggedId.caseId === card.caseId ? 4 : 1}
                   draggable
                   onDragStart={() => onDragStart(card)}
-                  onDragEnd={onDragEnd}
+                  onDragEnd={() => {
+                    // intentionally empty — dragend fires before drop on target,
+                    // clearing draggedId would break handleDrop. Cleanup happens in handleDrop.
+                  }}
                   sx={{
                     cursor: (card.status === 'pending' && !card.lockedByMe) || card.status === 'validating' || card.status === 'done' ? 'default' : 'grab',
-                    opacity: draggedId && draggedId.resourceId === card.resourceId && draggedId.idwf === card.idwf ? 0.5 : 1,
+                    opacity: draggedId && draggedId.resourceId === card.resourceId && draggedId.idwf === card.idwf && draggedId.caseId === card.caseId ? 0.5 : 1,
                     borderLeft: `4px solid ${columnBorderColor(col.color)}`,
                     transition: 'box-shadow 0.15s, opacity 0.15s',
                     '&:hover': { boxShadow: 3 },
