@@ -12,6 +12,7 @@ import Alert from '@mui/material/Alert';
 import { useTheme } from '../../providers';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 
+import TaskTypeIcon from './TaskTypeIcon';
 import api from '../../../src/api/client';
 
 // --- Types --------------------------------------------------------------- //
@@ -28,7 +29,7 @@ interface TaskListItem {
   checkDate: string | null;
   time_elapsed: string;
   model_name: string;
-  case_id: string;
+  tasktype: string | null;
 }
 
 interface TasksListResponse {
@@ -48,7 +49,7 @@ interface KanbanCard {
   lockedByMe: boolean;
   checkDate: Date | null;
   timeElapsed: string;
-  modelName: string;
+  tasktype: string | null;
   caseId: string;
 }
 
@@ -140,25 +141,25 @@ export default function TasksPage() {
         resourceId: t.resourceId, idwf: t.idwf, title: t.title || '(no title)',
         status: 'pending' as KanbanStatus, lockedByMe: !!t.locked_by,
         checkDate: t.checkDate ? new Date(t.checkDate) : null, timeElapsed: t.time_elapsed,
-        modelName: t.model_name, caseId: t.case_id,
+        modelName: t.model_name, caseId: t.case_id, tasktype: t.tasktype,
       })),
       ...items.filter((t) => t.status === 'user' && t.locked).map((t) => ({
         resourceId: t.resourceId, idwf: t.idwf, title: t.title || '(no title)',
         status: 'in_progress' as KanbanStatus, lockedByMe: !!t.locked_by,
         checkDate: t.checkDate ? new Date(t.checkDate) : null, timeElapsed: t.time_elapsed,
-        modelName: t.model_name, caseId: t.case_id,
+        modelName: t.model_name, caseId: t.case_id, tasktype: t.tasktype,
       })),
       ...items.filter((t) => t.status === 'validating').map((t) => ({
         resourceId: t.resourceId, idwf: t.idwf, title: t.title || '(no title)',
         status: 'validating' as KanbanStatus, lockedByMe: !!t.locked_by,
         checkDate: t.checkDate ? new Date(t.checkDate) : null, timeElapsed: t.time_elapsed,
-        modelName: t.model_name, caseId: t.case_id,
+        modelName: t.model_name, caseId: t.case_id, tasktype: t.tasktype,
       })),
       ...items.filter((t) => t.status === 'done').map((t) => ({
         resourceId: t.resourceId, idwf: t.idwf, title: t.title || '(no title)',
         status: 'done' as KanbanStatus, lockedByMe: !!t.locked_by,
         checkDate: t.checkDate ? new Date(t.checkDate) : null, timeElapsed: t.time_elapsed,
-        modelName: t.model_name, caseId: t.case_id,
+        modelName: t.model_name, caseId: t.case_id, tasktype: t.tasktype,
       })),
     ].filter((card) => {
       const key = `${card.resourceId}:${card.caseId}`;
@@ -288,6 +289,7 @@ export default function TasksPage() {
                 >
                   <CardContent sx={{ p: 2, '&:last-child': { pb: 2 } }}>
                     <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1 }}>
+                      <TaskTypeIcon tasktype={card.tasktype} size={18} />
                       <Typography variant="subtitle2" sx={{ fontWeight: 600, flex: 1 }}>{card.title}</Typography>
                       {card.status !== 'pending' && (
                         <Chip label={`${card.status} (locked)`} color="warning" />
