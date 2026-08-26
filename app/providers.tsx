@@ -1,32 +1,42 @@
 "use client";
-import { createContext, useContext, useState, useEffect, useCallback, useMemo } from 'react';
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { ThemeProvider as MuiThemeProvider, createTheme } from '@mui/material/styles';
-import { CacheProvider } from '@emotion/react';
-import createCache from '@emotion/cache';
+import {
+  createContext,
+  useContext,
+  useState,
+  useCallback,
+  useMemo,
+} from "react";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import {
+  ThemeProvider as MuiThemeProvider,
+  createTheme,
+} from "@mui/material/styles";
+import { CacheProvider } from "@emotion/react";
+import createCache from "@emotion/cache";
 
 // Theme context — shared state for dark mode across all consumers
 interface ThemeContextValue {
-  mode: 'light' | 'dark';
+  mode: "light" | "dark";
   toggleTheme: () => void;
 }
 const ThemeContext = createContext<ThemeContextValue | null>(null);
 
 export function useDarkMode() {
-  const [mode, setMode] = useState<'light' | 'dark'>('light');
-
-  // Sync theme preference after hydration — safe because initial render matches SSR.
-  useEffect(() => {
-    if (typeof localStorage !== 'undefined') {
-      const stored = localStorage.getItem('theme');
-      if (stored === 'light' || stored === 'dark') setMode(stored);
+  const getInitialMode = (): "light" | "dark" => {
+    if (typeof localStorage !== "undefined") {
+      const stored = localStorage.getItem("theme");
+      if (stored === "light" || stored === "dark") return stored;
     }
-  }, []);
+    return "light";
+  };
+
+  const [mode, setMode] = useState<"light" | "dark">(getInitialMode);
 
   const toggleTheme = useCallback(() => {
     setMode((prev) => {
-      const next = prev === 'light' ? 'dark' : 'light';
-      if (typeof localStorage !== 'undefined') localStorage.setItem('theme', next);
+      const next = prev === "light" ? "dark" : "light";
+      if (typeof localStorage !== "undefined")
+        localStorage.setItem("theme", next);
       return next;
     });
   }, []);
@@ -37,7 +47,8 @@ export function useDarkMode() {
 // Hook that reads from shared ThemeContext (throws if called outside provider)
 export function useTheme() {
   const ctx = useContext(ThemeContext);
-  if (!ctx) throw new Error('useTheme must be used within a Providers component');
+  if (!ctx)
+    throw new Error("useTheme must be used within a Providers component");
   return ctx;
 }
 
@@ -53,7 +64,7 @@ function ThemedProviders({ children }: { children: React.ReactNode }) {
     </ThemeContext.Provider>
   );
 }
-const emotionCache = createCache({ key: 'mui', prepend: true });
+const emotionCache = createCache({ key: "mui", prepend: true });
 
 export default function Providers({ children }: { children: React.ReactNode }) {
   const [queryClient] = useState(

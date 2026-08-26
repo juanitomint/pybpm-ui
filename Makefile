@@ -9,6 +9,9 @@ help:
 .PHONY: deps
 deps: ## Install dependencies using npm
 	npm install
+.PHONY: dev
+dev: deps ## Install dependencies and run the Next.js development server on :3000
+	npm run dev
 
 .PHONY: run
 run: ## Run the Next.js development server on :3000 (proxies /api/* to pybpm-api)

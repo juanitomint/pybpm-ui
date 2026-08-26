@@ -33,6 +33,10 @@
   },
   "include": [
     "src",
+    "app",
+    "next-env.d.ts",
+    "playwright.config.ts",
+    "tests",
     ".next/types/**/*.ts",
     ".next/dev/types/**/*.ts"
   ],
