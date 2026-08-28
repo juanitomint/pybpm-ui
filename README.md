@@ -4,83 +4,148 @@
 
 ## Architecture
 
+### System Architecture
+
+```mermaid
+graph TB
+    subgraph Browser["Browser (User)"]
+        LP[Login Page<br/>/login]
+        DP[Dashboard Home<br/>/dashboard]
+        TP[Task Kanban<br/>/dashboard/tasks]
+        IP[Inbox<br/>/dashboard/inbox]
+        MP[Message Detail<br/>/dashboard/inbox/message/[id]]
+    end
+    
+    subgraph Frontend["Next.js 16 App Router (Port 3000)"]
+        REW[Rewrite Rules<br/>/api/v1/* → backend]
+        
+        subgraph Components["React Components"]
+            RC[@tanstack/react-query]
+            MUI[MUI v9 Components]
+            DND[@dnd-kit Drag & Drop]
+            LUC[lucide-react Icons]
+            TM[Theme Context<br/>light/dark]
+        end
+        
+        subgraph Shared["src/"]
+            AC[api/client.ts<br/>axios + interceptors]
+            AU[src/hooks/useAuth.ts]
+        end
+        
+        subgraph Pages["app/"]
+            LP2[login/page.tsx]
+            DL[dashboard/layout.tsx]
+            DP2[dashboard/page.tsx]
+            TP2[dashboard/tasks/page.tsx]
+            IP2[dashboard/inbox/page.tsx]
+            MP2[inbox/message/[id]/page.tsx]
+        end
+        
+        REW --> Components
+        Components --> Shared
+        Pages --> REW
+    end
+    
+    subgraph Backend["pybpm-api FastAPI (Port 5000)"]
+        AU2[Auth<br/>/api/v1/auth/*]
+        DS[Dashboard<br/>/api/v1/dashboard/*]
+        IB[Inbox<br/>/api/v1/inbox/*]
+        EN[Engine<br/>/api/v1/bpm/engine/*]
+        RP[Repository<br/>/api/v1/bpm/repository/*]
+    end
+    
+    LP -->|POST /auth/token| AU2
+    DP -->|GET /dashboard/*| DS
+    TP -->|GET/PATCH /dashboard/tasks/*| DS
+    IP -->|GET/POST /inbox/*| IB
+    MP -->|GET/PUT/DELETE /inbox/*| IB
+    
+    style Frontend fill:#e8f5e9
+    style Backend fill:#f3e5f5
 ```
-┌──────────────────────────────────────────────────────────────┐
-│                     Browser (User)                           │
-│  ┌──────────┐  ┌──────────┐  ┌──────────┐  ┌──────────┐   │
-│  │  Login   │  │ Dashboard│  │  Inbox   │  │  Tasks   │   │
-│  │  Page    │  │          │  │          │  │ Kanban   │   │
-│  └────┬─────┘  └────┬─────┘  └────┬─────┘  └────┬─────┘   │
-│       │              │              │              │         │
-│       │  POST /auth/token            │              │         │
-│       │──────────────│──────────────│──────────────│         │
-│       │  Bearer token stored in     │              │         │
-│       │  localStorage               │              │         │
-│       │              │              │              │         │
-│       │  ┌───────────┴──────────────┴──────────────┴──────┐  │
-│       │  │  React Components (Client-Side)               │  │
-│       │  │  ┌──────────────────────────────────────────┐ │  │
-│       │  │  │ @tanstack/react-query (data fetching)   │ │  │
-│       │  │  │ MUI v9 (material components)            │ │  │
-│       │  │  │ @dnd-kit (drag-and-drop kanban)         │ │  │
-│       │  │  │ lucide-react (icons)                    │ │  │
-│       │  │  └──────────────────────────────────────────┘ │  │
-│       │  └────────────────────────────────────────────────┘  │
-│       │              │              │              │         │
-│       │  ┌───────────┴──────────────┴──────────────┴──────┐  │
-│       │  │  src/api/client.ts (axios instance)           │  │
-│       │  │  - Auto Bearer token injection                │  │
-│       │  │  - 401 → clear token → redirect /login       │  │
-│       │  └────────────────────────────────────────────────┘  │
-└──────────────────────────────────────────────────────────────┘
-                              │
-                    HTTP/JSON (via Next.js rewrites)
-                              │
-┌──────────────────────────────────────────────────────────────┐
-│                    Next.js 16 App Router                     │
-│                    (port 3000 dev / 5173 prod)               │
-│                                                              │
-│  ┌──────────────────────────────────────────────────────┐   │
-│  │              Rewrite Rules (next.config.mjs)          │   │
-│  │                                                      │   │
-│  │  /api/v1/*  →  PYBPM_API_URL/api/v1/*               │   │
-│  │                                                      │   │
-│  │  Client Code              →  Rewrite Target          │   │
-│  │  /api/v1/auth/token       →  http://backend:5000/... │   │
-│  │  /api/v1/dashboard/*      →  http://backend:5000/... │   │
-│  │  /api/v1/inbox/*          →  http://backend:5000/... │   │
-│  │  /api/v1/bpm/engine/*     →  http://backend:5000/... │   │
-│  └──────────────────────────────────────────────────────┘   │
-│                                                              │
-│  ┌──────────────────────────────────────────────────────┐   │
-│  │              App Router Structure                     │   │
-│  │                                                      │   │
-│  │  app/                                                  │   │
-│  │  ├── layout.tsx         Root layout (Providers)      │   │
-│  │  ├── providers.tsx      QueryClient + MUI + Theme    │   │
-│  │  ├── page.tsx           Redirect to /login           │   │
-│  │  ├── login/page.tsx     Login page                   │   │
-│  │  └── dashboard/         Protected dashboard          │   │
-│  │      ├── layout.tsx     Dashboard shell (AppBar)     │   │
-│  │      ├── page.tsx       Dashboard home (stats cards) │   │
-│  │      ├── tasks/page.tsx Kanban board                 │   │
-│  │      ├── inbox/page.tsx Inbox list                   │   │
-│  │      └── inbox/message/[id]/page.tsx Message detail  │   │
-│  └──────────────────────────────────────────────────────┘   │
-└──────────────────────────────────────────────────────────────┘
-                              │
-                    HTTP/JSON
-                              │
-┌──────────────────────────────────────────────────────────────┐
-│                    pybpm-api (FastAPI:5000)                  │
-│  ┌──────────────────────────────────────────────────────┐   │
-│  │  Auth          /api/v1/auth/token, /auth/me          │   │
-│  │  Dashboard     /api/v1/dashboard/*                   │   │
-│  │  Inbox         /api/v1/inbox/*                       │   │
-│  │  Engine        /api/v1/bpm/engine/*                  │   │
-│  │  Repository    /api/v1/bpm/repository/*              │   │
-│  └──────────────────────────────────────────────────────┘   │
-└──────────────────────────────────────────────────────────────┘
+
+### Authentication Flow
+
+```mermaid
+sequenceDiagram
+    participant User
+    participant Login as Login Page
+    participant API as pybpm-api
+    participant LS as localStorage
+
+    User->>Login: Enter credentials
+    Login->>API: POST /auth/token {username, password}
+    API-->>Login: {access_token, token_type}
+    
+    Login->>LS: setItem("token", access_token)
+    Login->>API: GET /auth/me (Bearer token)
+    API-->>Login: {id, nick, name}
+    
+    Login->>LS: setItem("user", response)
+    Login->>User: redirect /dashboard
+    
+    Note over User,LS: On every API call:<br/>interceptor adds Bearer token<br/>401 → clear token → redirect /login
+```
+
+### Dashboard Tasks Kanban Flow
+
+```mermaid
+flowchart LR
+    subgraph Columns["Kanban Columns"]
+        P[Pending<br/>status='pending']
+        IP[In Progress<br/>status='user']
+        V[Validating<br/>status='validating']
+        D[Done<br/>status='done']
+    end
+    
+    P -->|drag / PATCH /lock| IP
+    IP -->|drag / PATCH /validate| V
+    V -->|drag / PATCH /done| D
+    
+    IP -->|drag back| P
+    V -->|drag back| IP
+    D -->|drag back| V
+    
+    subgraph API["Backend Calls"]
+        LOCK[PATCH /dashboard/tasks/lock]
+        VALID[PATCH /dashboard/tasks/validate]
+        DONE[PATCH /dashboard/tasks/done]
+    end
+    
+    P --> LOCK
+    IP --> VALID
+    V --> DONE
+```
+
+### Inbox Message Flow
+
+```mermaid
+flowchart TD
+    subgraph Inbox["Inbox Page"]
+        FOLD[Folder Tabs:<br/>Inbox / Sent / Trash]
+        FILTER[Filter: all / read / unread]
+        PAG[Pagination]
+    end
+    
+    subgraph Message["Message Detail"]
+        READ[Mark as read]
+        STAR[Toggle star]
+        DEL[Move to trash]
+        REP[Reply (stub)]
+    end
+    
+    FOLD -->|GET /inbox/filter| API
+    FILTER --> API
+    PAG --> API
+    
+    API --> MSG["Message Object"]
+    MSG --> READ
+    MSG --> STAR
+    MSG --> DEL
+    MSG --> REP
+    
+    style Inbox fill:#fff3e0
+    style Message fill:#e3f2fd
 ```
 
 ## Tech Stack
@@ -119,7 +184,7 @@ pybpm-ui/
 │       │   └── TaskTypeIcon.tsx # Task type icons (user, manual, script, etc.)
 │       └── inbox/
 │           ├── page.tsx     # Inbox message list (folder filter, pagination)
-│           └── message/[id]/
+│           └── inbox/message/[id]/
 │               └── page.tsx # Message detail (read, star, delete)
 ├── src/
 │   ├── api/
@@ -203,27 +268,6 @@ pybpm-ui/
 
 ## Authentication Flow
 
-```
-┌──────────┐     POST /auth/token      ┌──────────┐
-│ Login    │ ─────────────────────────▶ │ pybpm-   │
-│ Page     │  {username, password}      │ api      │
-│          │                            │          │
-│          │◀───────────────────────── │          │
-│          │  {access_token, token_type}│          │
-│          │                            │          │
-│          │  localStorage.setItem(     │          │
-│          │    "token", token)         │          │
-│          │                            │          │
-│          │  GET /auth/me             │          │
-│          │──────────────────────────▶│          │
-│          │◀───────────────────────── │          │
-│          │  {id, nick, name}         │          │
-│          │                            │          │
-│          │  useAuth() → user state   │          │
-│          │  → redirect /dashboard    │          │
-└──────────┘                            └──────────┘
-```
-
 ### Auth Interceptor (`src/api/client.ts`)
 
 Every outgoing request is intercepted:
@@ -251,27 +295,37 @@ api.interceptors.response.use(
 );
 ```
 
+### useAuth Hook
+
+```typescript
+// Login
+const { login, logout, user } = useAuth();
+await login(nick, password);  // stores token in localStorage
+
+// Logout
+logout();  // clears token and user state
+
+// Check auth
+if (!user) return <Redirect to="/login" />;
+```
+
 ## Theming
 
 ### Dark Mode Architecture
 
-```
-┌──────────────────────────────────────┐
-│  ThemeContext (shared state)         │
-│  mode: "light" | "dark"             │
-│  toggleTheme()                      │
-└──────────────┬───────────────────────┘
-               │
-    ┌──────────┼──────────┐
-    │          │          │
-    ▼          ▼          ▼
- Themed-   MUI       localStorage
- Providers  Theme     ("theme")
-    │          │
-    ▼          ▼
-  Query-    createTheme
- Client     ({ palette: { mode } })
- Provider
+```mermaid
+graph TB
+    LC[ThemeContext<br/>shared state]
+    LC -->|mode| LS[localStorage<br/>"theme"]
+    LC -->|toggleTheme| LM[Light Mode]
+    LC -->|toggleTheme| DM[Dark Mode]
+    
+    LC --> MUI[MUI ThemeProvider<br/>createTheme]
+    MUI --> CT[QueryClientProvider]
+    CT --> APP[Application]
+    
+    style LC fill:#fff3e0
+    style LS fill:#e3f2fd
 ```
 
 - Theme preference stored in `localStorage("theme")`
