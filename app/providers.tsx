@@ -5,6 +5,7 @@ import {
   useState,
   useCallback,
   useMemo,
+  useEffect,
 } from "react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import {
@@ -22,25 +23,24 @@ interface ThemeContextValue {
 const ThemeContext = createContext<ThemeContextValue | null>(null);
 
 export function useDarkMode() {
-  const getInitialMode = (): "light" | "dark" => {
-    if (typeof localStorage !== "undefined") {
-      const stored = localStorage.getItem("theme");
-      if (stored === "light" || stored === "dark") return stored;
-    }
-    return "light";
-  };
+  // Always default to "light" to match SSR — reading localStorage during useState
+  // init causes hydration mismatch because the server has no window/localStorage.
+  const [mode, setMode] = useState<"light" | "dark">("light");
 
-  const [mode, setMode] = useState<"light" | "dark">(getInitialMode);
+  useEffect(() => {
+    const stored = window.localStorage.getItem("theme");
+    if (stored === "light" || stored === "dark") {
+      setMode(stored);
+    }
+  }, []);
 
   const toggleTheme = useCallback(() => {
     setMode((prev) => {
       const next = prev === "light" ? "dark" : "light";
-      if (typeof localStorage !== "undefined")
-        localStorage.setItem("theme", next);
+      window.localStorage.setItem("theme", next);
       return next;
     });
   }, []);
-
   return { mode, toggleTheme };
 }
 

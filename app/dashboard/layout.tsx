@@ -20,7 +20,8 @@ import Box from "@mui/material/Box";
 import Divider from "@mui/material/Divider";
 import Popover from "@mui/material/Popover";
 import { LayoutDashboard as LayoutDashboardIcon } from "lucide-react";
-import { Menu as MenuIcon } from "lucide-react";
+import { PanelLeftClose as PanelLeftCloseIcon } from "lucide-react";
+import { PanelLeftOpen as PanelLeftOpenIcon } from "lucide-react";
 import { Inbox as InboxIcon } from "lucide-react";
 import { BarChart3 as BarChart3Icon } from "lucide-react";
 import { Settings as SettingsIcon } from "lucide-react";
@@ -104,10 +105,10 @@ export default function DashboardLayout({
 
   // Popover state for profile menu
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
+  const isDark = mode === "dark";
 
   const handleToggleDrawer = () => setDrawerOpen((prev) => !prev);
 
-  const isDark = mode === "dark";
   const themeIcon = isDark ? <SunIcon size={20} /> : <MoonStarIcon size={20} />;
 
   const handleProfileClick = (event: React.MouseEvent<HTMLElement>) => {
@@ -139,7 +140,11 @@ export default function DashboardLayout({
       >
         <Toolbar>
           <IconButton onClick={handleToggleDrawer} size="large" edge="start">
-            <MenuIcon size={24} />
+            {drawerOpen ? (
+              <PanelLeftCloseIcon size={24} />
+            ) : (
+              <PanelLeftOpenIcon size={24} />
+            )}
           </IconButton>
 
           <Typography variant="h6" noWrap sx={{ ml: 1.5, fontWeight: 700 }}>
