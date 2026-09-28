@@ -120,13 +120,9 @@ const TASKS_QUERY_KEY = ["dashboard-tasks"] as const;
 // --- Backend calls ------------------------------------------------------- //
 
 async function fetchTasksList(): Promise<TasksListResponse> {
-  const baseUrl = "http://localhost:5000";
-  const token = localStorage.getItem("token");
   const params = new URLSearchParams({ page: "1", per_page: "99" });
-  const res = await fetch(`${baseUrl}/dashboard/tasks?${params.toString()}`, {
-    headers: token ? { Authorization: `Bearer ${token}` } : {},
-  });
-  return res.json();
+  const res = await api.get(`/dashboard/tasks?${params.toString()}`);
+  return res.data;
 }
 async function transitionTask(
   resourceId: string,
