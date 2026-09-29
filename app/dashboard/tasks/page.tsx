@@ -144,7 +144,10 @@ async function transitionTask(
     const valRes = await api.patch("/dashboard/tasks/validate", body);
     if (valRes.status >= 400)
       throw new Error(`validate failed: ${valRes.status}`);
-  }
+  } else if (targetStatus === "done") {
+    const doneRes = await api.patch("/dashboard/tasks/done", body);
+    if (doneRes.status >= 400)
+      throw new Error(`done failed: ${doneRes.status}`);
 }
 
 // --- Component ----------------------------------------------------------- //
@@ -455,7 +458,6 @@ export default function TasksPage() {
                   sx={{
                     cursor:
                       (card.status === "pending" && !card.lockedByMe) ||
-                      card.status === "validating" ||
                       card.status === "done"
                         ? "default"
                         : "grab",
