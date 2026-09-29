@@ -1,165 +1,107 @@
-/** Icon for any BPMN token type, rendered as inline SVG. */
+/** Icon for a BPMN token type, rendered from PNG images in public/images/icons/. */
 
-const TYPE_ICONS: Record<string, JSX.Element> = {
-  // Events
-  StartNoneEvent: (
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-      <circle cx="12" cy="12" r="9" />
-    </svg>
-  ),
-  StartMessageEvent: (
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-      <circle cx="12" cy="12" r="9" />
-      <path d="M8 12h8M12 8v8" />
-    </svg>
-  ),
-  StartTimerEvent: (
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-      <circle cx="12" cy="12" r="9" />
-      <path d="M12 7v5l3 3" />
-    </svg>
-  ),
-  StartErrorEvent: (
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
-      <circle cx="12" cy="12" r="9" />
-      <path d="M12 8v4M12 16h.01" />
-    </svg>
-  ),
-  IntermediateCatchEvent: (
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-      <circle cx="12" cy="12" r="9" />
-      <circle cx="12" cy="12" r="5" />
-    </svg>
-  ),
-  IntermediateThrowEvent: (
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-      <circle cx="12" cy="12" r="9" />
-      <circle cx="12" cy="12" r="5" />
-      <path d="M12 9v6M9 12h6" />
-    </svg>
-  ),
-  EndErrorEvent: (
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
-      <circle cx="12" cy="12" r="9" />
-      <path d="M12 8v4M12 16h.01" />
-    </svg>
-  ),
-  EndMessageEvent: (
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-      <circle cx="12" cy="12" r="9" />
-      <path d="M8 12h8" />
-    </svg>
-  ),
-  EndTerminateEvent: (
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
-      <circle cx="12" cy="12" r="9" />
-      <path d="M12 8v8" />
-    </svg>
-  ),
+import Image from "next/image";
+import Box from "@mui/material/Box";
 
-  // Gateways
-  ParallelGateway: (
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-      <path d="M12 3L21 12L12 21L3 12Z" />
-      <path d="M12 7L17 12L12 17L7 12Z" />
-    </svg>
-  ),
-  Exclusive_Databased_Gateway: (
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-      <path d="M12 3L21 12L12 21L3 12Z" />
-      <path d="M9 9L15 15M15 9L9 15" />
-    </svg>
-  ),
-  EventbasedGateway: (
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-      <path d="M12 3L21 12L12 21L3 12Z" />
-      <circle cx="12" cy="12" r="3" />
-    </svg>
-  ),
-  InclusiveGateway: (
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-      <path d="M12 3L21 12L12 21L3 12Z" />
-      <path d="M12 8v8M8 12h8" />
-    </svg>
-  ),
+function getTokenIcon(type: string | null): string | null {
+  if (!type) return null;
 
-  // Tasks
-  UserTask: (
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-      <rect x="4" y="4" width="16" height="16" rx="2" />
-      <circle cx="9" cy="9" r="1.5" fill="currentColor" />
-      <path d="M7 14c0-2 2-3 5-3s5 1 5 3" />
-    </svg>
-  ),
-  ManualTask: (
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-      <rect x="4" y="4" width="16" height="16" rx="2" />
-      <path d="M8 10h8M8 14h5" />
-    </svg>
-  ),
-  ServiceTask: (
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-      <rect x="4" y="4" width="16" height="16" rx="2" />
-      <path d="M9 9h6v6H9z" />
-    </svg>
-  ),
-  ScriptTask: (
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-      <rect x="4" y="4" width="16" height="16" rx="2" />
-      <path d="M9 9l6 6M15 9l-6 6" />
-    </svg>
-  ),
-  BusinessRuleTask: (
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-      <rect x="4" y="4" width="16" height="16" rx="2" />
-      <path d="M9 8h6M9 12h6M9 16h6" />
-    </svg>
-  ),
-  SendTask: (
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-      <rect x="4" y="4" width="16" height="16" rx="2" />
-      <path d="M9 12h6M12 9l3 3-3 3" />
-    </svg>
-  ),
-  ReceiveTask: (
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-      <rect x="4" y="4" width="16" height="16" rx="2" />
-      <path d="M15 12H9M12 9L9 12l3 3" />
-    </svg>
-  ),
+  const map: Record<string, string> = {
+    // tasktype values (primary lookup)
+    User: "type.user.png",
+    Manual: "type.manual.png",
+    Script: "type.script.png",
+    Send: "type.send.png",
+    Receive: "type.receive.png",
+    "Business Rule": "type.business.rule.png",
+    Service: "type.service.png",
+    // type field fallbacks
+    UserTask: "type.user.png",
+    ManualTask: "type.manual.png",
+    ScriptTask: "type.script.png",
+    SendTask: "type.send.png",
+    ReceiveTask: "type.receive.png",
+    BusinessRuleTask: "type.business.rule.png",
+    ServiceTask: "type.service.png",
+    CallActivity: "type.call.png",
+    SubProcess: "type.subprocess.png",
+    CollapsedSubprocess: "type.subprocess.png",
+    EventSubprocess: "type.subprocess.png",
+    CollapsedEventSubprocess: "type.subprocess.png",
+    ParallelGateway: "parallel.png",
+    Exclusive_Databased_Gateway: "exclusive.png",
+    EventbasedGateway: "eventbased.png",
+    InclusiveGateway: "inclusive.png",
+    ComplexGateway: "exclusive.png",
+    StartNoneEvent: "start-none.png",
+    StartMessageEvent: "start-message.png",
+    StartTimerEvent: "start-timer.png",
+    StartErrorEvent: "start-error.png",
+    StartSignalEvent: "start-signal.png",
+    StartEscalationEvent: "start-error.png",
+    StartConditionalEvent: "start-none.png",
+    StartCompensationEvent: "start-error.png",
+    StartMultipleEvent: "start-none.png",
+    StartParallelMultipleEvent: "start-none.png",
+    IntermediateTimerEvent: "intermediate-timer.png",
+    IntermediateMessageEvent: "intermediate-message.png",
+    IntermediateErrorEvent: "intermediate-error.png",
+    IntermediateSignalEvent: "intermediate-signal.png",
+    IntermediateEscalationEvent: "intermediate-error.png",
+    IntermediateConditionalEvent: "intermediate-catch.png",
+    IntermediateLinkEventCatching: "intermediate-catch.png",
+    IntermediateCancelEvent: "intermediate-throw.png",
+    IntermediateCompensationEventCatching: "intermediate-catch.png",
+    IntermediateMessageEventCatching: "intermediate-message.png",
+    IntermediateMultipleEventCatching: "intermediate-catch.png",
+    IntermediateParallelMultipleEventCatching: "intermediate-catch.png",
+    EndNoneEvent: "end-none.png",
+    EndMessageEvent: "end-message.png",
+    EndErrorEvent: "end-error.png",
+    EndSignalEvent: "end-signal.png",
+    EndTerminateEvent: "end-terminate.png",
+    EndEscalationEvent: "end-error.png",
+    EndCompensationEvent: "end-terminate.png",
+    EndMultipleEvent: "end-terminate.png",
+  };
 
-  // Default
-  default: (
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-      <rect x="4" y="4" width="16" height="16" rx="2" />
-    </svg>
-  ),
-};
+  return map[type] ?? null;
+}
 
 export default function TokenTypeIcon({
   type,
+  tasktype,
   size = 20,
 }: {
   type: string | null;
+  tasktype?: string | null;
   size?: number;
 }) {
-  const icon = type ? TYPE_ICONS[type] : null;
-  const fallback = TYPE_ICONS.default;
-
-  if (!icon) return fallback;
+  const lookupKey = tasktype ?? type;
+  if (!lookupKey) return null;
+  const icon = getTokenIcon(lookupKey);
+  if (!icon) return null;
 
   return (
-    <span
-      style={{
-        width: size,
-        height: size,
-        flexShrink: 0,
-        display: "inline-flex",
+    <Box
+      sx={{
+        display: "flex",
         alignItems: "center",
         justifyContent: "center",
+        width: size,
+        height: size,
+        bgcolor: "grey.100",
+        borderRadius: 1,
       }}
     >
-      {icon}
-    </span>
+      <Image
+        src={`/images/icons/${icon}`}
+        alt={type ?? ""}
+        width={size - 2}
+        height={size - 2}
+        style={{ flexShrink: 0 }}
+        unoptimized
+      />
+    </Box>
   );
 }

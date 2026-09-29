@@ -52,7 +52,7 @@ interface KanbanCard {
   lockedByMe: boolean;
   checkDate: Date | null;
   timeElapsed: string;
-  tasktype: string | null;
+  type: string | null;
   caseId: string;
 }
 
@@ -198,6 +198,7 @@ export default function TasksPage() {
           modelName: t.model_name,
           caseId: t.case_id,
           tasktype: t.tasktype,
+          type: t.type || null,
         })),
       ...items
         .filter((t) => t.status === "user" && t.locked)
@@ -212,6 +213,7 @@ export default function TasksPage() {
           modelName: t.model_name,
           caseId: t.case_id,
           tasktype: t.tasktype,
+          type: t.type || null,
         })),
       ...items
         .filter((t) => t.status === "validating")
@@ -226,9 +228,10 @@ export default function TasksPage() {
           modelName: t.model_name,
           caseId: t.case_id,
           tasktype: t.tasktype,
+          type: t.type || null,
         })),
       ...items
-        .filter((t) => t.status === "done" || t.status === "finished")
+        .filter((t) => t.status === "done")
         .map((t) => ({
           resourceId: t.resourceId,
           idwf: t.idwf,
@@ -240,6 +243,7 @@ export default function TasksPage() {
           modelName: t.model_name,
           caseId: t.case_id,
           tasktype: t.tasktype,
+          type: t.type || null,
         })),
     ].filter((card) => {
       const key = `${card.resourceId}:${card.caseId}`;
@@ -485,7 +489,7 @@ export default function TasksPage() {
                         mb: 1,
                       }}
                     >
-                      <TokenTypeIcon type={card.type} size={18} />
+                      <TokenTypeIcon type={card.type} tasktype={card.tasktype} size={18} />
                       <Typography
                         variant="subtitle2"
                         sx={{ fontWeight: 600, flex: 1 }}
@@ -516,7 +520,7 @@ export default function TasksPage() {
                         >
                           <Play size={14} />
                         </IconButton>
-                        <LockIcon size={14} sx={{ color: "grey.300" }} />
+                        <LockIcon size={14} style={{ color: "grey.300" }} />
                       </Box>
                     )}
                     </Box>
@@ -555,7 +559,7 @@ export default function TasksPage() {
                         onClick={() => {
                           const text = `resource_id=${card.resourceId}\ncase_id=${card.caseId}\nidwf=${card.idwf}`;
                           navigator.clipboard.writeText(text);
-                          setNotification({ open: true, message: "IDs copied to clipboard", severity: "success" });
+                          setNotification({ open: true, message: "IDs copied to clipboard", severity: "info" });
                         }}
                         sx={{ color: "grey.500" }}
                       >

@@ -181,7 +181,7 @@ pybpm-ui/
 │       ├── page.tsx         # Dashboard home — stats cards
 │       ├── tasks/
 │       │   ├── page.tsx     # Kanban board (pending/in-progress/validating/done)
-│       │   └── TaskTypeIcon.tsx # Task type icons (user, manual, script, etc.)
+│       │   └── TokenTypeIcon.tsx # Token type icons (events, gateways, tasks)
 │       └── inbox/
 │           ├── page.tsx     # Inbox message list (folder filter, pagination)
 │           └── inbox/message/[id]/
@@ -192,7 +192,7 @@ pybpm-ui/
 │   │   └── README.md        # API client documentation
 │   └── hooks/
 │       └── useAuth.ts       # Auth hook (login, logout, user state)
-├── public/images/tasktype/  # Task type icons (PNG)
+├── public/images/icons/       # BPMN token type icons (events, gateways, tasks)
 ├── tests/e2e/
 │   ├── auth.spec.ts         # Login flow tests
 │   ├── inbox.spec.ts        # Inbox tests
@@ -423,4 +423,4 @@ docker compose up -d
 6. **Relative API paths**: All client calls use relative paths (`/api/v1/...`) proxied through Next.js rewrite rules. This avoids CORS issues and allows environment-independent configuration.
 7. **Dark mode**: Custom `ThemeContext` with `localStorage` persistence. MUI `createTheme` generates the palette from the mode. Toggle available in the AppBar.
 8. **Playwright E2E tests**: Tests cover login flow, inbox operations, and task management. Auth helper provides browser-based login for test isolation.
-9. **Task type icons**: Static PNG icons in `public/images/tasktype/` for each task type (user, manual, script, send, receive, business-rule).
+9. **Token type icons**: Static PNG icons in `public/images/icons/` for all BPMN token types (events, gateways, tasks).
