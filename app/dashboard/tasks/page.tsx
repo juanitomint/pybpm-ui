@@ -6,6 +6,7 @@ import Typography from "@mui/material/Typography";
 import Card from "@mui/material/Card";
 import CardContent from "@mui/material/CardContent";
 import Chip from "@mui/material/Chip";
+import IconButton from "@mui/material/IconButton";
 import LinearProgress from "@mui/material/LinearProgress";
 import Snackbar from "@mui/material/Snackbar";
 import Alert from "@mui/material/Alert";
@@ -492,11 +493,28 @@ export default function TasksPage() {
                         {card.title}
                       </Typography>
                     {card.status !== "pending" && (
-                      <Chip
-                        icon={<Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}><Play size={12} /><Lock size={14} /></Box>}
-                        sx={{ bgcolor: 'grey.700', color: 'grey.100', justifyContent: 'center' }}
+                      <IconButton
                         size="small"
-                      />
+                        onClick={() =>
+                          api
+                            .patch(`/bpm/engine/gate/${card.idwf}/${card.caseId}/${card.resourceId}`)
+                            .catch((err) =>
+                              setNotification({
+                                open: true,
+                                message: `Gate failed: ${(err as { message: string }).message}`,
+                                severity: "error",
+                              }),
+                            )
+                        }
+                        sx={{
+                          bgcolor: "grey.700",
+                          color: "grey.100",
+                          "&:hover": { bgcolor: "grey.600" },
+                          p: 0.5,
+                        }}
+                      >
+                        <Play size={14} />
+                      </IconButton>
                     )}
                     </Box>
 
