@@ -226,7 +226,7 @@ export default function TasksPage() {
           tasktype: t.tasktype,
         })),
       ...items
-        .filter((t) => t.status === "done")
+        .filter((t) => t.status === "done" || t.status === "finished")
         .map((t) => ({
           resourceId: t.resourceId,
           idwf: t.idwf,
