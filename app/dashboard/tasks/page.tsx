@@ -149,6 +149,7 @@ async function transitionTask(
     if (doneRes.status >= 400)
       throw new Error(`done failed: ${doneRes.status}`);
 }
+}
 
 // --- Component ----------------------------------------------------------- //
 
