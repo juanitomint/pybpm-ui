@@ -493,28 +493,31 @@ export default function TasksPage() {
                         {card.title}
                       </Typography>
                     {card.status !== "pending" && (
-                      <IconButton
-                        size="small"
-                        onClick={() =>
-                          api
-                            .patch(`/bpm/engine/gate/${card.idwf}/${card.caseId}/${card.resourceId}`)
-                            .catch((err) =>
-                              setNotification({
-                                open: true,
-                                message: `Gate failed: ${(err as { message: string }).message}`,
-                                severity: "error",
-                              }),
-                            )
-                        }
-                        sx={{
-                          bgcolor: "grey.700",
-                          color: "grey.100",
-                          "&:hover": { bgcolor: "grey.600" },
-                          p: 0.5,
-                        }}
-                      >
-                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}><Play size={14} /><Lock size={14} /></Box>
-                      </IconButton>
+                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                        <IconButton
+                          size="small"
+                          onClick={() =>
+                            api
+                              .post(`/bpm/engine/gate/${card.idwf}/${card.caseId}/${card.resourceId}`)
+                              .catch((err) =>
+                                setNotification({
+                                  open: true,
+                                  message: `Gate failed: ${(err as { message: string }).message}`,
+                                  severity: "error",
+                                }),
+                              )
+                          }
+                          sx={{
+                            bgcolor: "grey.700",
+                            color: "grey.100",
+                            "&:hover": { bgcolor: "grey.600" },
+                            p: 0.5,
+                          }}
+                        >
+                          <Play size={14} />
+                        </IconButton>
+                        <Lock size={14} sx={{ color: "grey.300" }} />
+                      </Box>
                     )}
                     </Box>
 
