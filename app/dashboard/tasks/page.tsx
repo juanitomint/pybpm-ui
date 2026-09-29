@@ -14,6 +14,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 
 import TaskTypeIcon from "./TaskTypeIcon";
 import api from "../../../src/api/client";
+import { Lock } from "lucide-react";
 
 // --- Types --------------------------------------------------------------- //
 
@@ -490,12 +491,14 @@ export default function TasksPage() {
                       >
                         {card.title}
                       </Typography>
-                      {card.status !== "pending" && (
-                        <Chip
-                          label={`${card.status} (locked)`}
-                          color="warning"
-                        />
-                      )}
+                    {card.status !== "pending" && (
+                      <Chip
+                        icon={<Lock size={14} />}
+                        label={card.status}
+                        color="warning"
+                        size="small"
+                      />
+                    )}
                     </Box>
 
                     <Box
