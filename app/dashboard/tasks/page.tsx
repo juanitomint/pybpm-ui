@@ -13,8 +13,7 @@ import Alert from "@mui/material/Alert";
 import { useTheme } from "../../providers";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 
-import GateTypeIcon from "./GateTypeIcon";
-import TaskTypeIcon from "./TaskTypeIcon";
+import TokenTypeIcon from "./TokenTypeIcon";
 import api from "../../../src/api/client";
 import { Lock as LockIcon, Play, Copy } from "lucide-react";
 
@@ -486,11 +485,7 @@ export default function TasksPage() {
                         mb: 1,
                       }}
                     >
-                      <TaskTypeIcon tasktype={card.tasktype} size={18} />
-                      {card.type === "ParallelGateway" && <GateTypeIcon gateType="ParallelGateway" size={18} />}
-                      {card.type === "Exclusive_Databased_Gateway" && <GateTypeIcon gateType="Exclusive_Databased_Gateway" size={18} />}
-                      {card.type === "EventbasedGateway" && <GateTypeIcon gateType="EventbasedGateway" size={18} />}
-                      {card.type === "InclusiveGateway" && <GateTypeIcon gateType="InclusiveGateway" size={18} />}
+                      <TokenTypeIcon type={card.type} size={18} />
                       <Typography
                         variant="subtitle2"
                         sx={{ fontWeight: 600, flex: 1 }}
