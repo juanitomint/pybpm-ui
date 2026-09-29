@@ -494,7 +494,7 @@ export default function TasksPage() {
                     {card.status !== "pending" && (
                       <Chip
                         icon={<Lock size={14} />}
-                        sx={{ bgcolor: 'grey.200', color: 'grey.800' }}
+                        sx={{ bgcolor: 'grey.700', color: 'grey.100' }}
                         size="small"
                       />
                     )}
