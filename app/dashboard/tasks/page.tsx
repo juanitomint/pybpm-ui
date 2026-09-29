@@ -513,7 +513,7 @@ export default function TasksPage() {
                           p: 0.5,
                         }}
                       >
-                        <Play size={14} />
+                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}><Play size={14} /><Lock size={14} /></Box>
                       </IconButton>
                     )}
                     </Box>
