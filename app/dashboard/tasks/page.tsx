@@ -13,9 +13,10 @@ import Alert from "@mui/material/Alert";
 import { useTheme } from "../../providers";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 
+import GateTypeIcon from "./GateTypeIcon";
 import TaskTypeIcon from "./TaskTypeIcon";
 import api from "../../../src/api/client";
-import { Lock, Play } from "lucide-react";
+import { Lock as LockIcon, Play, Copy } from "lucide-react";
 
 // --- Types --------------------------------------------------------------- //
 
@@ -486,6 +487,10 @@ export default function TasksPage() {
                       }}
                     >
                       <TaskTypeIcon tasktype={card.tasktype} size={18} />
+                      {card.type === "ParallelGateway" && <GateTypeIcon gateType="ParallelGateway" size={18} />}
+                      {card.type === "Exclusive_Databased_Gateway" && <GateTypeIcon gateType="Exclusive_Databased_Gateway" size={18} />}
+                      {card.type === "EventbasedGateway" && <GateTypeIcon gateType="EventbasedGateway" size={18} />}
+                      {card.type === "InclusiveGateway" && <GateTypeIcon gateType="InclusiveGateway" size={18} />}
                       <Typography
                         variant="subtitle2"
                         sx={{ fontWeight: 600, flex: 1 }}
@@ -516,7 +521,7 @@ export default function TasksPage() {
                         >
                           <Play size={14} />
                         </IconButton>
-                        <Lock size={14} sx={{ color: "grey.300" }} />
+                        <LockIcon size={14} sx={{ color: "grey.300" }} />
                       </Box>
                     )}
                     </Box>
@@ -543,18 +548,24 @@ export default function TasksPage() {
                         {formatRelativeDate(card.checkDate)}
                       </Typography>
                     )}
-                    <Box
-                      sx={{ display: "flex", flexWrap: "wrap", gap: 1, mt: 1 }}
-                    >
-                      {["resource_id", "case_id", "idwf"].map((key) => (
-                        <Chip
-                          key={key}
-                          label={`${key}=${card[key === "resource_id" ? "resourceId" : key === "case_id" ? "caseId" : "idwf"]}`}
-                          variant="outlined"
-                          color="secondary"
-                          sx={{ fontFamily: "monospace", py: 0.75, px: 1 }}
-                        />
-                      ))}
+                    <Box sx={{ display: "flex", alignItems: "center", gap: 0.5, mt: 1 }}>
+                      <Chip
+                        label={`resource_id=${card.resourceId}  case_id=${card.caseId}  idwf=${card.idwf}`}
+                        variant="outlined"
+                        color="secondary"
+                        sx={{ fontFamily: "monospace", py: 0.5, px: 1, fontSize: "0.7rem" }}
+                      />
+                      <IconButton
+                        size="small"
+                        onClick={() => {
+                          const text = `resource_id=${card.resourceId}\ncase_id=${card.caseId}\nidwf=${card.idwf}`;
+                          navigator.clipboard.writeText(text);
+                          setNotification({ open: true, message: "IDs copied to clipboard", severity: "success" });
+                        }}
+                        sx={{ color: "grey.500" }}
+                      >
+                        <Copy size={14} />
+                      </IconButton>
                     </Box>
                   </CardContent>
                 </Card>

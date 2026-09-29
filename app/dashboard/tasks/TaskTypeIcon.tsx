@@ -1,5 +1,6 @@
 /** Icon for a BPMN task type, rendered from the pybpm-admin stencilset PNGs. */
 
+import NextImage from "next/image";
 import Box from "@mui/material/Box";
 
 const ICON_MAP: Record<string, string> = {
@@ -32,7 +33,7 @@ export default function TaskTypeIcon({
         width: 32,
         height: 32,
         borderRadius: "50%",
-        bgcolor: "background.paper",
+        bgcolor: "white",
         opacity: 0.85,
         flexShrink: 0,
       }}
