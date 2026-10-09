@@ -158,7 +158,7 @@ export default function DashboardLayout({
             onChange={() => toggleTheme()}
             icon={<SunIcon size={18} />}
             checkedIcon={<MoonStarIcon size={18} />}
-            aria-label="Toggle theme"
+            slotProps={{ input: { "aria-label": "Toggle theme" } }}
           />
 
           {/* Profile menu */}
