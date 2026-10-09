@@ -11,6 +11,7 @@ import AppBar from "@mui/material/AppBar";
 import Toolbar from "@mui/material/Toolbar";
 import IconButton from "@mui/material/IconButton";
 import Typography from "@mui/material/Typography";
+import Switch from "@mui/material/Switch";
 import Drawer from "@mui/material/Drawer";
 import List from "@mui/material/List";
 import ListItem from "@mui/material/ListItem";
@@ -109,8 +110,6 @@ export default function DashboardLayout({
 
   const handleToggleDrawer = () => setDrawerOpen((prev) => !prev);
 
-  const themeIcon = isDark ? <SunIcon size={20} /> : <MoonStarIcon size={20} />;
-
   const handleProfileClick = (event: React.MouseEvent<HTMLElement>) => {
     setAnchorEl(event.currentTarget);
   };
@@ -154,9 +153,13 @@ export default function DashboardLayout({
           <Box sx={{ flexGrow: 1 }} />
 
           {/* Theme toggle */}
-          <IconButton onClick={toggleTheme} size="small">
-            <span suppressHydrationWarning>{themeIcon}</span>
-          </IconButton>
+          <Switch
+            checked={isDark}
+            onChange={() => toggleTheme()}
+            icon={<SunIcon size={18} />}
+            checkedIcon={<MoonStarIcon size={18} />}
+            aria-label="Toggle theme"
+          />
 
           {/* Profile menu */}
           {user && (
