@@ -11,6 +11,7 @@ import IconButton from "@mui/material/IconButton";
 import Backdrop from "@mui/material/Backdrop";
 import CircularProgress from "@mui/material/CircularProgress";
 import Divider from "@mui/material/Divider";
+import { useTheme } from "@mui/material/styles";
 import { useParams, useRouter } from "next/navigation";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 
@@ -46,6 +47,7 @@ export default function MessageDetailPage() {
   const params = useParams();
   const router = useRouter();
   const queryClient = useQueryClient();
+  const theme = useTheme();
   const [deleting, setDeleting] = useState(false);
 
   const messageid = Array.isArray(params.id) ? params.id[0] : params.id;
@@ -85,7 +87,7 @@ export default function MessageDetailPage() {
 
   if (isLoading || deleting) {
     return (
-      <Backdrop open={true} sx={{ color: "#fff", zIndex: 1300 }}>
+      <Backdrop open={true} sx={{ color: theme.palette.common.white, zIndex: 1300 }}>
         <CircularProgress color="inherit" />
       </Backdrop>
     );
@@ -169,8 +171,8 @@ export default function MessageDetailPage() {
             <StarOffIcon
               width={20}
               height={20}
-              fill="#f59e0b"
-              stroke="#f59e0b"
+              fill={theme.palette.warning.main}
+              stroke={theme.palette.warning.main}
             />
           ) : (
             <StarOutlineIcon width={20} height={20} />

@@ -18,15 +18,19 @@ The user-facing React application for the DNA2BPM suite. Replaces the legacy Ext
 ```
 pybpm-ui/
 ├── app/                    # Next.js App Router pages
-│   ├── layout.tsx          # Root layout — wraps children in Providers (QueryClientProvider)
+│   ├── layout.tsx          # Root layout — inlines pre-paint theme bootstrap script, wraps children in Providers
 │   ├── page.tsx            # Home — redirects to /login
 │   ├── globals.css         # Tailwind imports + global styles
-│   ├── providers.tsx       # Client component wrapping with TanStack Query provider
+│   ├── providers.tsx       # Client component: TanStack Query + ThemeContext/MUI ThemeProvider; exports useTheme()
 │   └── login/
 │       └── page.tsx        # Login placeholder (Tailwind styled)
 ├── src/                    # Shared utilities (framework-agnostic)
 │   ├── api/
 │   │   └── client.ts       # Axios instance with JWT interceptor and 401 redirect
+│   ├── theme/
+│   │   ├── colors.ts       # Semantic light/dark design tokens — the only file allowed to hold hex literals
+│   │   ├── index.ts        # createAppTheme(mode) builds MUI v9 themes from tokens; re-exports constants
+│   │   └── useAppTheme.ts  # System-aware mode hook: OS preference + localStorage "theme" persistence
 │   └── hooks/
 │       └── useAuth.ts      # Auth state: login/logout/me via pybpm-api /auth/* endpoints
 ├── next.config.mjs          # Next.js config (no rewrites — API calls go direct to pybpm-api)
@@ -34,6 +38,12 @@ pybpm-ui/
 ├── tsconfig.json           # TypeScript strict config for Next.js App Router
 └── package.json            # Dependencies (React, Next.js, TanStack Query, Axios, Tailwind)
 ```
+
+## Theming (light/dark)
+
+- All colors come from `src/theme/colors.ts` (`Colors.light|dark`, `KanbanStatusColors`, `Brand`). Components must not contain hex literals — use MUI palette roles (`theme.palette.*`) or these tokens.
+- The initial mode is resolved pre-paint by the inline script in `app/layout.tsx` (localStorage "theme", else OS preference) which sets a class on `<html>`; `useAppTheme()` keeps React state and the MUI theme in sync afterwards (live OS changes, other-tab storage events).
+- SSR always renders light. Never adopt a non-light mode during first client render — React 19 fails hydration on MUI's theme-derived styles when server/client themes differ.
 
 ## Task Lifecycle
 

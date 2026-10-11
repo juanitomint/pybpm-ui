@@ -1,6 +1,7 @@
 "use client";
 import { useEffect, useState } from "react";
 import { Box, Card, CardContent, Typography } from "@mui/material";
+import { useTheme } from "@mui/material/styles";
 
 import { useAuth } from "../../src/hooks/useAuth";
 import api from "../../src/api/client";
@@ -15,6 +16,7 @@ interface CaseCounts {
 }
 export default function DashboardPage() {
   const { user, loading: authLoading } = useAuth();
+  const theme = useTheme();
   const [counts, setCounts] = useState<CaseCounts | null>(null);
 
   useEffect(() => {
@@ -48,25 +50,25 @@ export default function DashboardPage() {
             label: "Total Cases",
             value: String(total),
             icon: BarChart3,
-            color: "#1976d2",
+            color: theme.palette.primary.main,
           },
           {
             label: "Open",
             value: String(pending),
             icon: Clock,
-            color: "#f59e0b",
+            color: theme.palette.warning.main,
           },
           {
             label: "Closed",
             value: String(completed),
             icon: CheckCircle2,
-            color: "#10b981",
+            color: theme.palette.success.main,
           },
           {
             label: "Overdue",
             value: "0",
             icon: AlertTriangle,
-            color: "#ef4444",
+            color: theme.palette.error.main,
           },
         ].map((card) => (
           <Box

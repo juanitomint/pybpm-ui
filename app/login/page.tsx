@@ -11,6 +11,7 @@ import CircularProgress from "@mui/material/CircularProgress";
 import { styled } from "@mui/material/styles";
 import { useSearchParams } from "next/navigation";
 import { useAuth } from "../../src/hooks/useAuth";
+import { Brand } from "../../src/theme/colors";
 import { setAuthToken } from "../actions/set-auth-cookie";
 import { Suspense } from "react";
 
@@ -87,7 +88,7 @@ function LoginPageContent() {
         minHeight: "100vh",
         alignItems: "center",
         justifyContent: "center",
-        background: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
+        background: Brand.loginGradient,
       }}
     >
       <Card sx={{ width: "100%", maxWidth: 420, p: 4, boxShadow: 8 }}>

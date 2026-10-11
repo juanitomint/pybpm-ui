@@ -11,6 +11,7 @@ import LinearProgress from "@mui/material/LinearProgress";
 import Snackbar from "@mui/material/Snackbar";
 import Alert from "@mui/material/Alert";
 import { useTheme } from "../../providers";
+import { KanbanStatusColors } from "../../../src/theme/colors";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 
 import TokenTypeIcon from "./TokenTypeIcon";
@@ -87,33 +88,33 @@ const COLUMNS: ColumnDef[] = [
     key: "pending",
     label: "Pending",
     color: "default",
-    accent: "#757575",
-    bgLight: "#f5f5f5",
-    bgDark: "#242424",
+    accent: KanbanStatusColors.pending.accent,
+    bgLight: KanbanStatusColors.pending.bgLight,
+    bgDark: KanbanStatusColors.pending.bgDark,
   },
   {
     key: "in_progress",
     label: "In Progress",
     color: "primary",
-    accent: "#1976d2",
-    bgLight: "#e3f2fd",
-    bgDark: "#0a1b2e",
+    accent: KanbanStatusColors.in_progress.accent,
+    bgLight: KanbanStatusColors.in_progress.bgLight,
+    bgDark: KanbanStatusColors.in_progress.bgDark,
   },
   {
     key: "validating",
     label: "Validating",
     color: "warning",
-    accent: "#f59e0b",
-    bgLight: "#fff8e1",
-    bgDark: "#2c1e00",
+    accent: KanbanStatusColors.validating.accent,
+    bgLight: KanbanStatusColors.validating.bgLight,
+    bgDark: KanbanStatusColors.validating.bgDark,
   },
   {
     key: "done",
     label: "Done",
     color: "success",
-    accent: "#10b981",
-    bgLight: "#e8f5e9",
-    bgDark: "#071a0e",
+    accent: KanbanStatusColors.done.accent,
+    bgLight: KanbanStatusColors.done.bgLight,
+    bgDark: KanbanStatusColors.done.bgDark,
   },
 ];
 
@@ -346,15 +347,6 @@ export default function TasksPage() {
     e.preventDefault();
   };
 
-  const columnBorderColor = (color: ColumnDef["color"]) =>
-    color === "default"
-      ? "#9e9e9e"
-      : color === "primary"
-        ? "#1976d2"
-        : color === "warning"
-          ? "#f59e0b"
-          : "#10b981";
-
   return (
     <Box sx={{ p: 2 }}>
       <Typography
@@ -475,7 +467,7 @@ export default function TasksPage() {
                       draggedId.caseId === card.caseId
                         ? 0.5
                         : 1,
-                    borderLeft: `4px solid ${columnBorderColor(col.color)}`,
+                    borderLeft: `4px solid ${col.accent}`,
                     transition: "box-shadow 0.15s, opacity 0.15s",
                     "&:hover": { boxShadow: 3 },
                   }}

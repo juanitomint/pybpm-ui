@@ -2,47 +2,25 @@
 import {
   createContext,
   useContext,
-  useState,
-  useCallback,
   useMemo,
-  useEffect,
+  useState,
 } from "react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import {
-  ThemeProvider as MuiThemeProvider,
-  createTheme,
-} from "@mui/material/styles";
+import { ThemeProvider as MuiThemeProvider } from "@mui/material/styles";
 import { CacheProvider } from "@emotion/react";
 import createCache from "@emotion/cache";
-
-// Theme context — shared state for dark mode across all consumers
+import { createAppTheme } from "../src/theme";
+import { useAppTheme } from "../src/theme/useAppTheme";
+// Theme context — shared state for dark mode across all consumers.
+// Mode resolution (system preference + persistence) is handled by useAppTheme:
+// a pre-paint script in app/layout.tsx applies the initial class to <html>,
+// and the hook tracks OS `prefers-color-scheme` changes, other-tab storage
+// updates, and persists manual choices under localStorage "theme".
 interface ThemeContextValue {
   mode: "light" | "dark";
   toggleTheme: () => void;
 }
 const ThemeContext = createContext<ThemeContextValue | null>(null);
-
-export function useDarkMode() {
-  // Always default to "light" to match SSR — reading localStorage during useState
-  // init causes hydration mismatch because the server has no window/localStorage.
-  const [mode, setMode] = useState<"light" | "dark">("light");
-
-  useEffect(() => {
-    const stored = window.localStorage.getItem("theme");
-    if (stored === "light" || stored === "dark") {
-      setMode(stored);
-    }
-  }, []);
-
-  const toggleTheme = useCallback(() => {
-    setMode((prev) => {
-      const next = prev === "light" ? "dark" : "light";
-      window.localStorage.setItem("theme", next);
-      return next;
-    });
-  }, []);
-  return { mode, toggleTheme };
-}
 
 // Hook that reads from shared ThemeContext (throws if called outside provider)
 export function useTheme() {
@@ -52,11 +30,13 @@ export function useTheme() {
   return ctx;
 }
 
-// Wraps children with ThemeContext + MUI ThemeProvider so theme updates reactively
+// Wraps children with ThemeContext + MUI ThemeProvider so theme
+// updates propagate to both CSS (html class) and MUI components.
 function ThemedProviders({ children }: { children: React.ReactNode }) {
-  const { mode, toggleTheme } = useDarkMode();
-  // useMemo ensures new theme only when mode changes, avoiding unnecessary re-renders
-  const muiTheme = useMemo(() => createTheme({ palette: { mode } }), [mode]);
+  const { mode, toggleTheme } = useAppTheme();
+
+  // New MUI theme only when the resolved mode changes — avoids re-render storms.
+  const muiTheme = useMemo(() => createAppTheme(mode), [mode]);
 
   return (
     <ThemeContext.Provider value={{ mode, toggleTheme }}>
