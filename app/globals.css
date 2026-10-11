@@ -1,6 +1,2 @@
 @import "tailwindcss";
 
-/* Theme mode is driven by the `class` attribute on <html> ("light" | "dark"),
-   set by next-themes from the stored preference or OS color scheme. This makes
-   CSS-level dark: variants follow the in-app switch instead of only the media query. */
-@custom-variant dark (&:where(.dark, .dark *));
