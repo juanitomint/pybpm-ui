@@ -20,6 +20,7 @@ import ListItemText from "@mui/material/ListItemText";
 import Box from "@mui/material/Box";
 import Divider from "@mui/material/Divider";
 import Popover from "@mui/material/Popover";
+import { useTheme as useMUITheme } from "@mui/material/styles";
 import { LayoutDashboard as LayoutDashboardIcon } from "lucide-react";
 import { PanelLeftClose as PanelLeftCloseIcon } from "lucide-react";
 import { PanelLeftOpen as PanelLeftOpenIcon } from "lucide-react";
@@ -84,6 +85,7 @@ export default function DashboardLayout({
 }) {
   const [drawerOpen, setDrawerOpen] = useState(true);
   const { mode, toggleTheme } = useTheme();
+  const mui = useMUITheme();
   const router = useRouter();
   const { user, logout } = useAuth();
 
@@ -156,9 +158,23 @@ export default function DashboardLayout({
           <Switch
             checked={isDark}
             onChange={() => toggleTheme()}
-            icon={<SunIcon size={18} />}
-            checkedIcon={<MoonStarIcon size={18} />}
-            slotProps={{ input: { "aria-label": "Toggle theme" } }}
+            slotProps={{
+              input: { "aria-label": "Toggle theme" },
+              thumb: {
+                children: isDark ? (
+                  <MoonStarIcon size={14} color={mui.palette.primary.contrastText} />
+                ) : (
+                  <SunIcon size={14} color={mui.palette.primary.main} />
+                ),
+              },
+            }}
+            sx={{
+              "& .MuiSwitch-thumb": {
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+              },
+            }}
           />
 
           {/* Profile menu */}
