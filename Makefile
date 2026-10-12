@@ -15,7 +15,7 @@ dev: deps ## Install dependencies and run the Next.js development server on :300
 
 .PHONY: run
 run: ## Run the Next.js development server on :3000 (proxies /api/* to pybpm-api)
-	#@fuser -k 3000/tcp
+	-@fuser -k 3000/tcp
 	npm run dev
 
 .PHONY: build
