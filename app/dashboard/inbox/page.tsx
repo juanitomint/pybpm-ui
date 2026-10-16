@@ -6,8 +6,7 @@ import Box from "@mui/material/Box";
 import Typography from "@mui/material/Typography";
 import Card from "@mui/material/Card";
 import List from "@mui/material/List";
-import ListItem from "@mui/material/ListItem";
-import ListItemText from "@mui/material/ListItemText";
+import ListItemButton from "@mui/material/ListItemButton";
 import IconButton from "@mui/material/IconButton";
 import Badge from "@mui/material/Badge";
 import Button from "@mui/material/Button";
@@ -343,8 +342,7 @@ export default function InboxPage() {
           <List dense sx={{ py: 0 }}>
             {messages.map((msg) => (
               <React.Fragment key={msg.msgid}>
-                <ListItem
-                  component="button"
+                <ListItemButton
                   onClick={() =>
                     router.push(`/dashboard/inbox/message/${msg.msgid}`)
                   }
@@ -358,57 +356,57 @@ export default function InboxPage() {
                         ? "primary.lighter"
                         : "action.hover",
                     },
-                    cursor: "pointer",
                   }}
                 >
-                  <ListItemText
-                    primary={
-                      <Typography
-                        variant="body1"
-                        noWrap
-                        sx={{
-                          fontWeight: msg.read ? 400 : 700,
-                          color: msg.read ? "text.primary" : "primary.dark",
-                        }}
-                      >
-                        {msg.subject || "(no subject)"}
-                      </Typography>
-                    }
-                    secondary={
-                      <Box
-                        sx={{
-                          display: "flex",
-                          alignItems: "center",
-                          gap: 1.5,
-                          mt: 0.25,
-                        }}
-                      >
-                        <Chip
-                          label={formatSender(msg.from_user)}
-                          variant="outlined"
-                          color="info"
-                          sx={{ py: 1, px: 1.5 }}
-                        />
-                        <Typography variant="caption" color="text.secondary">
-                          {msg.tag && (
-                            <>
-                              · Tagged as{" "}
-                              <Chip
-                                label={msg.tag}
-                                variant="outlined"
-                                color="success"
-                              />
-                            </>
-                          )}
-                        </Typography>
-                        <Box sx={{ flexGrow: 1 }} />
-                        <ClockIcon size={14} color="text.disabled" />
-                        <Typography variant="caption" color="text.secondary">
-                          {formatMessageTime(msg.msg_time)}
-                        </Typography>
-                      </Box>
-                    }
-                  />
+                  {/* Primary line: subject */}
+                  <Typography
+                    variant="body1"
+                    noWrap
+                    component="div"
+                    sx={{
+                      fontWeight: msg.read ? 400 : 700,
+                      color: msg.read ? "text.primary" : "primary.dark",
+                      mb: 0.5,
+                      pr: 2,
+                    }}
+                  >
+                    {msg.subject || "(no subject)"}
+                  </Typography>
+
+                  {/* Secondary line: sender chip, tag, time */}
+                  <Box
+                    component="div"
+                    sx={{
+                      display: "flex",
+                      alignItems: "center",
+                      gap: 1.5,
+                      pr: 2,
+                    }}
+                  >
+                    <Chip
+                      label={formatSender(msg.from_user)}
+                      variant="outlined"
+                      color="info"
+                      sx={{ py: 1, px: 1.5 }}
+                    />
+                    <Typography variant="caption" color="text.secondary">
+                      {msg.tag && (
+                        <>
+                          · Tagged as{" "}
+                          <Chip
+                            label={msg.tag}
+                            variant="outlined"
+                            color="success"
+                          />
+                        </>
+                      )}
+                    </Typography>
+                    <Box sx={{ flexGrow: 1 }} />
+                    <ClockIcon size={14} color="text.disabled" />
+                    <Typography variant="caption" color="text.secondary">
+                      {formatMessageTime(msg.msg_time)}
+                    </Typography>
+                  </Box>
 
                   {/* Action buttons */}
                   <IconButton
@@ -449,7 +447,7 @@ export default function InboxPage() {
                   <IconButton size="small" sx={{ color: "text.secondary" }}>
                     <MoreVerticalIcon size={18} />
                   </IconButton>
-                </ListItem>
+                </ListItemButton>
               </React.Fragment>
             ))}
           </List>
