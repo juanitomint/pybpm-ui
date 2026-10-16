@@ -6,12 +6,14 @@ The user-facing React application for the DNA2BPM suite. Replaces the legacy Ext
 
 ## Tech Stack
 
-- **Framework**: Next.js 14+ App Router + TypeScript
+- **Framework**: Next.js 16 App Router + TypeScript (see `node_modules/next/dist/docs/` for current APIs — this major has breaking changes vs. training data)
 - **Build tool**: Next.js (`next dev`, `next build`)
 - **Routing**: Next.js App Router (`app/` directory)
 - **Data fetching**: TanStack Query (React Query) v5
 - **HTTP client**: Axios with auth interceptors
 - **Styling**: Tailwind CSS v4
+- **Icons**: [Lucide](https://lucide.dev/) — beautiful & consistent icon set (`lucide-react`)
+- **Theming**: Semantic light/dark design tokens in `src/theme/colors.ts` (`Colors.light|dark`, `KanbanStatusColors`, `Brand`) — single source of truth; components reference MUI palette roles (`theme.palette.*`), never hex literals
 
 ## Architecture
 
